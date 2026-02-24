@@ -1,0 +1,6 @@
+{
+  "name": "Roblox",
+  "string": "RobloxGameCloud/1.0 (+http://www.roblox.com)",
+  "group": "roblox",
+  "flag": "HttpService"
+}
