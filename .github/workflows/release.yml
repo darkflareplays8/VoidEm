@@ -31,6 +31,11 @@ jobs:
           cd installer
           npm install
           npm run build
+      - name: Find exe
+        shell: pwsh
+        run: |
+          Write-Host "Searching entire workspace for exe files..."
+          Get-ChildItem -Recurse -Filter "*.exe" | Select-Object FullName
       - name: Get version
         id: ver
         shell: bash
@@ -76,6 +81,11 @@ jobs:
           cd emulator
           npm install
           npm run build
+      - name: Find exe
+        shell: pwsh
+        run: |
+          Write-Host "Searching entire workspace for exe files..."
+          Get-ChildItem -Recurse -Filter "*.exe" | Select-Object FullName
       - name: Get version
         id: ver
         shell: bash
