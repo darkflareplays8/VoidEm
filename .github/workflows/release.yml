@@ -37,7 +37,7 @@ jobs:
 
       - name: List build output
         shell: pwsh
-        run: Get-ChildItem -Recurse installer/src-tauri/target/release/bundle
+        run: Get-ChildItem -Recurse installer/src-tauri/target -Filter "*.exe" -ErrorAction SilentlyContinue
 
       - name: Get version
         id: ver
