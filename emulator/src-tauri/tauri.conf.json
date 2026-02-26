@@ -17,7 +17,7 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
-    "icon": ["../src-tauri/icons/icon.ico"],
+    "icon": ["icons/icon.ico"],
     "publisher": "VoidHub",
     "copyright": "Copyright © 2026 VoidHub"
   }
