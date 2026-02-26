@@ -30,7 +30,8 @@ jobs:
           $conf | ConvertTo-Json -Depth 10 | Set-Content installer/src-tauri/tauri.conf.json
           Write-Host "Set installer version to $ver"
 
-      - run: cd installer && npm install && npm run build
+      - name: Build installer
+        run: cd installer && npm install && npm run build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -39,6 +40,16 @@ jobs:
         run: Get-ChildItem -Recurse installer/src-tauri/target/release/bundle
 
       - name: Get version
+        id: ver
+        shell: pwsh
+        run: |
+          $rel = Get-Content release.json | ConvertFrom-Json
+          echo "VERSION=$($rel.version)" >> $env:GITHUB_OUTPUT
+
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: VoidEmulator v${{ steps.ver.outputs.VERSION }}
           body: |
             ## VoidEmulator v${{ steps.ver.outputs.VERSION }}
             **Download VoidInstaller-Setup.exe** to install VoidEmulator on your PC.
@@ -69,11 +80,11 @@ jobs:
           $conf = Get-Content emulator/src-tauri/tauri.conf.json | ConvertFrom-Json
           $conf.version = $ver
           $conf | ConvertTo-Json -Depth 10 | Set-Content emulator/src-tauri/tauri.conf.json
-          # Also update CURRENT_VERSION in lib.rs
           (Get-Content emulator/src-tauri/src/lib.rs) -replace 'const CURRENT_VERSION: &str = "[^"]*"', "const CURRENT_VERSION: &str = `"$ver`"" | Set-Content emulator/src-tauri/src/lib.rs
           Write-Host "Set emulator version to $ver"
 
-      - run: cd emulator && npm install && npm run build
+      - name: Build emulator
+        run: cd emulator && npm install && npm run build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -84,7 +95,8 @@ jobs:
           $rel = Get-Content release.json | ConvertFrom-Json
           echo "VERSION=$($rel.version)" >> $env:GITHUB_OUTPUT
 
-      - uses: softprops/action-gh-release@v2
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             emulator/src-tauri/target/release/VoidEmulator.exe
