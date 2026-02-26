@@ -57,7 +57,9 @@ jobs:
             **Download VoidInstaller-Setup.exe** to install VoidEmulator on your PC.
             The installer sets everything up automatically.
             Support: https://discord.gg/XUe82svaAr
-          files: installer/src-tauri/target/release/bundle/nsis/*.exe
+          files: |
+            installer/src-tauri/target/release/bundle/**/*.exe
+            installer/src-tauri/target/release/bundle/*.exe
           draft: false
           prerelease: false
         env:
@@ -106,6 +108,8 @@ jobs:
       - name: Upload release
         uses: softprops/action-gh-release@v2
         with:
-          files: emulator/src-tauri/target/release/bundle/nsis/*.exe
+          files: |
+            emulator/src-tauri/target/release/bundle/**/*.exe
+            emulator/src-tauri/target/release/bundle/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
