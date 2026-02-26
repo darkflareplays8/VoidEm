@@ -9,55 +9,54 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-installer:
     runs-on: windows-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable-x86_64-pc-windows-msvc
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build Tauri app
-        run: npm run build
+      - run: cd installer && npm install && npm run build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get version
+        id: ver
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        shell: bash
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: VoidEmulator v${{ steps.ver.outputs.VERSION }}
+          body: |
+            ## VoidEmulator v${{ steps.ver.outputs.VERSION }}
+            **Download VoidInstaller-Setup.exe** to install VoidEmulator on your PC.
+            The installer sets everything up automatically.
+            Support: https://discord.gg/XUe82svaAr
+          files: installer/src-tauri/target/release/bundle/nsis/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get version from tag
-        id: version
+  build-emulator:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable-x86_64-pc-windows-msvc
+      - run: cd emulator && npm install && npm run build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get version
+        id: ver
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
         shell: bash
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
-          name: VoidEmulator v${{ steps.version.outputs.VERSION }}
-          body: |
-            ## VoidEmulator v${{ steps.version.outputs.VERSION }}
-            
-            Multi-instance Android emulator for Windows.
-            
-            ### Install
-            Download and run `VoidEmulator_${{ steps.version.outputs.VERSION }}_x64-setup.exe`
-            
-            On first launch it will automatically download QEMU, ADB and Android-x86.
-            
-            ### Support
-            https://discord.gg/XUe82svaAr
-          files: |
-            src-tauri/target/release/bundle/nsis/*.exe
-          draft: false
-          prerelease: false
+          files: emulator/src-tauri/target/release/VoidEmulator.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

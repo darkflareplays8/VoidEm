@@ -1,0 +1,23 @@
+{
+  "productName": "VoidInstaller",
+  "version": "../../../release.json",
+  "identifier": "com.voidhub.installer",
+  "build": { "frontendDist": "../src" },
+  "app": {
+    "windows": [{
+      "title": "VoidInstaller",
+      "width": 600,
+      "height": 500,
+      "resizable": false,
+      "center": true
+    }],
+    "security": { "csp": null }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/icon.ico"],
+    "publisher": "VoidHub",
+    "copyright": "Copyright © 2026 VoidHub"
+  }
+}

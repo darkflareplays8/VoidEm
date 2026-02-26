@@ -1,0 +1,6 @@
+[workspace]
+members = [
+  "installer/src-tauri",
+  "emulator/src-tauri"
+]
+resolver = "2"

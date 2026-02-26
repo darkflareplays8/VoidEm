@@ -1,8 +1,0 @@
-C:\Users\manoh\Downloads\VoidEm\src-tauri\target\release\deps\itoa-d98813193be22c5b.d: C:\Users\manoh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\itoa-1.0.17\src\lib.rs C:\Users\manoh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\itoa-1.0.17\src\u128_ext.rs
-
-C:\Users\manoh\Downloads\VoidEm\src-tauri\target\release\deps\libitoa-d98813193be22c5b.rlib: C:\Users\manoh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\itoa-1.0.17\src\lib.rs C:\Users\manoh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\itoa-1.0.17\src\u128_ext.rs
-
-C:\Users\manoh\Downloads\VoidEm\src-tauri\target\release\deps\libitoa-d98813193be22c5b.rmeta: C:\Users\manoh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\itoa-1.0.17\src\lib.rs C:\Users\manoh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\itoa-1.0.17\src\u128_ext.rs
-
-C:\Users\manoh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\itoa-1.0.17\src\lib.rs:
-C:\Users\manoh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\itoa-1.0.17\src\u128_ext.rs:

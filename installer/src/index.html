@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VoidInstaller</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=VT323&family=Rajdhani:wght@400;600;700&display=swap');
+  :root {
+    --void: #07030f; --surface: #0d0a1c; --border: #2a1a4a;
+    --accent: #8b2fc9; --accent2: #c044ff; --glow: #d580ff;
+    --dim: #4a3a6a; --text: #c8b8e8; --green: #50dc78; --red: #ff4444; --yellow: #ffc832;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--void); color:var(--text); font-family:'Rajdhani',sans-serif; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px; padding:40px; user-select:none; overflow:hidden; }
+  body::after { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9999; opacity:0.4; }
+  .title { font-family:'VT323',monospace; font-size:56px; color:var(--glow); text-shadow:0 0 30px var(--accent), 0 0 60px rgba(140,48,200,0.3); letter-spacing:8px; }
+  .sub { font-size:12px; color:var(--dim); letter-spacing:4px; text-transform:uppercase; }
+  #status { font-size:13px; color:var(--dim); letter-spacing:2px; text-transform:uppercase; min-height:20px; text-align:center; }
+  .progress-wrap { width:400px; }
+  .bar-bg { height:6px; background:var(--surface); border:1px solid var(--border); border-radius:3px; overflow:hidden; }
+  .bar { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); width:0%; transition:width 0.3s; box-shadow:0 0 8px var(--accent); }
+  .steps { width:400px; display:flex; flex-direction:column; gap:4px; }
+  .step { font-size:11px; letter-spacing:2px; text-transform:uppercase; display:flex; align-items:center; gap:8px; }
+  #log { width:400px; height:80px; background:#03020a; border:1px solid var(--border); padding:8px; overflow-y:auto; font-family:'Consolas',monospace; font-size:10px; color:#50c878; border-radius:3px; }
+  #log::-webkit-scrollbar { width:3px; } #log::-webkit-scrollbar-thumb { background:var(--border); }
+  #launch-btn { display:none; padding:12px 40px; background:linear-gradient(135deg,#3d1270,#6a20b0); border:1px solid var(--accent2); color:var(--glow); font-family:'Rajdhani',sans-serif; font-size:15px; font-weight:700; letter-spacing:4px; text-transform:uppercase; cursor:pointer; border-radius:4px; box-shadow:0 0 20px rgba(140,48,200,0.3); transition:all 0.2s; }
+  #launch-btn:hover { box-shadow:0 0 30px rgba(192,68,255,0.5); transform:translateY(-1px); }
+</style>
+</head>
+<body>
+<div class="title">VOIDINSTALLER</div>
+<div class="sub">Setting up VoidEmulator on your system</div>
+<div id="status">Initializing...</div>
+<div class="progress-wrap">
+  <div class="bar-bg"><div class="bar" id="bar"></div></div>
+</div>
+<div class="steps" id="steps"></div>
+<div id="log"></div>
+<button id="launch-btn" onclick="launchApp()">Launch VoidEmulator ▶</button>
+
+<script type="module">
+import { invoke } from 'https://unpkg.com/@tauri-apps/api@2/core';
+import { listen } from 'https://unpkg.com/@tauri-apps/api@2/event';
+
+const STEPS = [
+  { label: 'QEMU Emulator',    done: 25 },
+  { label: 'ADB Tools',        done: 47 },
+  { label: 'Android Image',    done: 88 },
+  { label: 'VoidEmulator.exe', done: 97 },
+  { label: 'Shortcuts',        done: 100 },
+];
+
+function renderSteps(pct) {
+  document.getElementById('steps').innerHTML = STEPS.map(s => {
+    const done = pct >= s.done;
+    const active = !done && pct >= s.done - 25;
+    const color = done ? 'var(--green)' : active ? 'var(--yellow)' : 'var(--dim)';
+    return `<div class="step" style="color:${color}"><span>${done ? '✓' : active ? '◎' : '○'}</span><span>${s.label}</span></div>`;
+  }).join('');
+}
+
+function log(msg) {
+  const el = document.getElementById('log');
+  const t = new Date().toLocaleTimeString('en-GB',{hour12:false});
+  el.innerHTML += `<div>[${t}] ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+await listen('install-progress', e => {
+  const { msg, pct } = e.payload;
+  document.getElementById('bar').style.width = Math.max(0,pct) + '%';
+  document.getElementById('status').textContent = msg;
+  renderSteps(pct);
+  log(msg);
+  if (pct >= 100) {
+    document.getElementById('status').style.color = 'var(--green)';
+    document.getElementById('launch-btn').style.display = 'block';
+  }
+  if (pct === -1) {
+    document.getElementById('status').style.color = 'var(--red)';
+  }
+});
+
+renderSteps(0);
+
+const installed = await invoke('check_installed');
+if (installed) {
+  document.getElementById('status').textContent = 'Already installed!';
+  document.getElementById('bar').style.width = '100%';
+  renderSteps(100);
+  document.getElementById('launch-btn').style.display = 'block';
+  log('VoidEmulator already installed');
+} else {
+  log('Starting installation...');
+  await invoke('run_install');
+}
+
+window.launchApp = async () => {
+  await invoke('launch_app');
+  window.__tauri_internals?.invoke('plugin:process|exit', { code: 0 }).catch(() => {});
+};
+</script>
+</body>
+</html>
