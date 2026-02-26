@@ -50,7 +50,7 @@ jobs:
             The installer sets everything up automatically.
             Support: https://discord.gg/XUe82svaAr
           files: |
-            installer/src-tauri/target/release/bundle/**/*.exe
+            target/release/voidinstaller.exe
           draft: false
           prerelease: false
         env:
@@ -94,6 +94,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            emulator/src-tauri/target/release/bundle/**/*.exe
+            target/release/voidemulator.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
