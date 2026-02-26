@@ -45,7 +45,7 @@ jobs:
             The installer sets everything up automatically.
             Support: https://discord.gg/XUe82svaAr
           files: |
-            target/release/bundle/**/*.exe
+            installer/src-tauri/target/release/bundle/**/*.exe
           draft: false
           prerelease: false
         env:
@@ -84,6 +84,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            target/release/bundle/**/*.exe
+            emulator/src-tauri/target/release/bundle/**/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
