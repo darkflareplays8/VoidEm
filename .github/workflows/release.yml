@@ -1,13 +1,10 @@
 name: Release
-
 on:
   push:
     tags:
       - 'v*'
-
 permissions:
   contents: write
-
 jobs:
   build-installer:
     runs-on: windows-latest
@@ -19,7 +16,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable-x86_64-pc-windows-msvc
-
       - name: Sync version from release.json
         shell: pwsh
         run: |
@@ -29,25 +25,16 @@ jobs:
           $conf.version = $ver
           $conf | ConvertTo-Json -Depth 10 | Set-Content installer/src-tauri/tauri.conf.json
           Write-Host "Set installer version to $ver"
-
       - name: Install and build
         shell: pwsh
         run: |
           cd installer
           npm install
           npm run build
-
-      - name: Find exe
-        shell: pwsh
-        run: |
-          Write-Host "Searching entire workspace for exe files..."
-          Get-ChildItem -Recurse -Filter "*.exe" | Select-Object FullName
-
       - name: Get version
         id: ver
         shell: bash
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
       - name: Upload release
         uses: softprops/action-gh-release@v2
         with:
@@ -58,12 +45,11 @@ jobs:
             The installer sets everything up automatically.
             Support: https://discord.gg/XUe82svaAr
           files: |
-            installer/src-tauri/target/release/bundle/**/*.exe
+            target/release/bundle/**/*.exe
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   build-emulator:
     runs-on: windows-latest
     steps:
@@ -74,7 +60,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable-x86_64-pc-windows-msvc
-
       - name: Sync version from release.json
         shell: pwsh
         run: |
@@ -85,29 +70,20 @@ jobs:
           $conf | ConvertTo-Json -Depth 10 | Set-Content emulator/src-tauri/tauri.conf.json
           (Get-Content emulator/src-tauri/src/lib.rs) -replace 'const CURRENT_VERSION: &str = "[^"]*"', "const CURRENT_VERSION: &str = `"$ver`"" | Set-Content emulator/src-tauri/src/lib.rs
           Write-Host "Set emulator version to $ver"
-
       - name: Install and build
         shell: pwsh
         run: |
           cd emulator
           npm install
           npm run build
-
-      - name: Find exe
-        shell: pwsh
-        run: |
-          Write-Host "Searching entire workspace for exe files..."
-          Get-ChildItem -Recurse -Filter "*.exe" | Select-Object FullName
-
       - name: Get version
         id: ver
         shell: bash
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
       - name: Upload release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            emulator/src-tauri/target/release/bundle/**/*.exe
+            target/release/bundle/**/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
