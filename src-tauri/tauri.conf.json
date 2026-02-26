@@ -1,0 +1,31 @@
+{
+  "productName": "VoidEmulator",
+  "version": "1.0.0",
+  "identifier": "com.voidemulator.app",
+  "build": {
+    "frontendDist": "../src"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "VoidEmulator",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "decorations": true,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/icon.ico"],
+    "publisher": "VoidHub",
+    "copyright": "Copyright © 2026 VoidHub"
+  }
+}

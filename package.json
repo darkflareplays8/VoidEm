@@ -2,33 +2,18 @@
   "name": "voidemulator",
   "version": "1.0.0",
   "description": "Multi-instance Android emulator manager",
-  "main": "src/main.js",
-  "scripts": {
-    "start": "electron .",
-    "build": "electron-builder --win --x64",
-    "pack": "electron-builder --dir"
+  "author": {
+    "name": "VoidHub",
+    "url": "https://discord.gg/XUe82svaAr"
   },
-  "build": {
-    "appId": "com.voidemulator.app",
-    "productName": "VoidEmulator",
-    "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico"
-    },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false
-    },
-    "files": ["src/**/*"],
-    "asar": true
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build"
   },
   "devDependencies": {
-    "electron": "^33.0.0",
-    "electron-builder": "^25.0.0"
+    "@tauri-apps/cli": "^2.0.0"
   },
   "dependencies": {
-    "axios": "^1.7.0",
-    "extract-zip": "^2.0.1",
-    "node-stream-zip": "^1.15.0"
+    "@tauri-apps/api": "^2.0.0"
   }
 }

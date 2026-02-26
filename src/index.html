@@ -441,10 +441,48 @@
   </div>
 </div>
 
+<script type="module">
+import { invoke } from 'https://unpkg.com/@tauri-apps/api@2/core';
+import { listen } from 'https://unpkg.com/@tauri-apps/api@2/event';
+window.__invoke = invoke;
+window.__listen = listen;
+</script>
 <script>
 const MAX = 3;
 let instances = [];
 let setupDone = false;
+
+// Tauri bridge — replaces window.dm from Electron
+const dm = {
+  checkSetup: () => window.__invoke('check_setup'),
+  runSetup: () => window.__invoke('run_setup'),
+  createInstance: (data) => window.__invoke('create_overlay', { id: data.id }),
+  startInstance: (id) => {
+    const inst = instances.find(i => i.id === id);
+    return window.__invoke('start_qemu', { id, index: inst?.index || 0 });
+  },
+  stopInstance: (id) => window.__invoke('stop_instance', { id }),
+  adbTap: (id, x, y) => {
+    const inst = instances.find(i => i.id === id);
+    const port = 5554 + (inst?.index || 0) * 2;
+    return window.__invoke('run_adb', { args: ['-s', `127.0.0.1:${port}`, 'shell', 'input', 'tap', String(x), String(y)] });
+  },
+  adbKey: (id, key) => {
+    const inst = instances.find(i => i.id === id);
+    const port = 5554 + (inst?.index || 0) * 2;
+    return window.__invoke('run_adb', { args: ['-s', `127.0.0.1:${port}`, 'shell', 'input', 'keyevent', key] });
+  },
+  adbSwipe: (id, x1, y1, x2, y2) => {
+    const inst = instances.find(i => i.id === id);
+    const port = 5554 + (inst?.index || 0) * 2;
+    return window.__invoke('run_adb', { args: ['-s', `127.0.0.1:${port}`, 'shell', 'input', 'swipe', String(x1), String(y1), String(x2), String(y2), '200'] });
+  },
+  onSetupProgress: (cb) => window.__listen('setup-progress', e => cb(e.payload)),
+  onInstanceLog: (cb) => window.__listen('instance-log', e => cb(e.payload)),
+  onInstanceState: (cb) => window.__listen('instance-state', e => cb(e.payload)),
+  onScreenUpdate: (cb) => window.__listen('screen-update', e => cb(e.payload)),
+};
+window.dm = dm;
 
 // ── LOG ──────────────────────────────────────────────────────────────
 const logBox = document.getElementById('log-box');
