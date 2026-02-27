@@ -94,7 +94,7 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         let base_img = PathBuf::from(IMAGES_DIR).join("android.img");
         if !base_img.exists() {
             let iso = std::env::temp_dir().join("android.iso");
-            if let Err(e) = http_download_progress("https://sourceforge.net/projects/android-x86/files/Release%204.4-r5/android-x86-4.4-r5.iso/download", &iso, "Android", 49, 86, &state) {
+            if let Err(e) = http_download_progress("https://www.fosshub.com/Android-x86.html/android-x86-4.4-r5.iso", &iso, "Android", 49, 86, &state) {
                 push(&format!("Android download failed: {}", e), -1); return;
             }
             push("Creating disk image...", 87);
