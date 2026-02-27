@@ -12,8 +12,7 @@
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:var(--void); color:var(--text); font-family:'Rajdhani',sans-serif; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:40px; user-select:none; overflow:hidden; }
-  body::after { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9999; opacity:0.4; }
-  .title { font-family:'VT323',monospace; font-size:52px; color:var(--glow); text-shadow:0 0 30px var(--accent), 0 0 60px rgba(140,48,200,0.3); letter-spacing:8px; }
+  .title { font-family:'VT323',monospace; font-size:52px; color:var(--glow); text-shadow:0 0 30px var(--accent); letter-spacing:8px; }
   .sub { font-size:11px; color:var(--dim); letter-spacing:4px; text-transform:uppercase; }
   #status { font-size:13px; color:var(--dim); letter-spacing:2px; text-transform:uppercase; min-height:18px; text-align:center; transition:color 0.3s; }
   .progress-wrap { width:420px; }
@@ -21,20 +20,10 @@
   .bar { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); width:0%; transition:width 0.4s; box-shadow:0 0 8px var(--accent); }
   .steps { width:420px; display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; }
   .step { font-size:11px; letter-spacing:1px; text-transform:uppercase; display:flex; align-items:center; gap:6px; }
-  #log {
-    width:420px; height:120px; background:#03020a;
-    border:1px solid var(--border); padding:8px 10px;
-    overflow-y:auto; font-family:'Consolas',monospace;
-    font-size:10px; color:#7a9f7a; border-radius:3px;
-    line-height:1.5;
-  }
-  #log::-webkit-scrollbar { width:3px; }
-  #log::-webkit-scrollbar-thumb { background:var(--border); }
-  .log-info { color:#7a9f7a; }
-  .log-error { color:var(--red); }
-  .log-warn { color:var(--yellow); }
-  .log-ok { color:var(--green); }
-  #launch-btn { display:none; padding:12px 40px; background:linear-gradient(135deg,#3d1270,#6a20b0); border:1px solid var(--accent2); color:var(--glow); font-family:'Rajdhani',sans-serif; font-size:15px; font-weight:700; letter-spacing:4px; text-transform:uppercase; cursor:pointer; border-radius:4px; box-shadow:0 0 20px rgba(140,48,200,0.3); transition:all 0.2s; }
+  #log { width:420px; height:120px; background:#03020a; border:1px solid var(--border); padding:8px 10px; overflow-y:auto; font-family:'Consolas',monospace; font-size:10px; color:#7a9f7a; border-radius:3px; line-height:1.5; }
+  #log::-webkit-scrollbar { width:3px; } #log::-webkit-scrollbar-thumb { background:var(--border); }
+  .log-info { color:#7a9f7a; } .log-error { color:var(--red); } .log-ok { color:var(--green); }
+  #launch-btn { display:none; padding:12px 40px; background:linear-gradient(135deg,#3d1270,#6a20b0); border:1px solid var(--accent2); color:var(--glow); font-family:'Rajdhani',sans-serif; font-size:15px; font-weight:700; letter-spacing:4px; text-transform:uppercase; cursor:pointer; border-radius:4px; transition:all 0.2s; }
   #launch-btn:hover { box-shadow:0 0 30px rgba(192,68,255,0.5); transform:translateY(-1px); }
 </style>
 </head>
@@ -49,10 +38,7 @@
 <div id="log"></div>
 <button id="launch-btn" onclick="launchApp()">Launch VoidEmulator ▶</button>
 
-<script type="module">
-const { invoke } = window.__TAURI__.core;
-const { listen } = window.__TAURI__.event;
-
+<script>
 const STEPS = [
   { label: 'QEMU',       done: 25 },
   { label: 'ADB Tools',  done: 47 },
@@ -66,75 +52,99 @@ function renderSteps(pct) {
     const done = pct >= s.done;
     const active = !done && pct >= s.done - 30;
     const color = done ? 'var(--green)' : active ? 'var(--yellow)' : 'var(--dim)';
-    return `<div class="step" style="color:${color}"><span>${done ? '✓' : active ? '◎' : '○'}</span><span>${s.label}</span></div>`;
+    return `<div class="step" style="color:${color}"><span>${done?'✓':active?'◎':'○'}</span><span>${s.label}</span></div>`;
   }).join('');
 }
 
-function log(msg, type = 'info') {
+function log(msg, type='info') {
   const el = document.getElementById('log');
-  const t = new Date().toLocaleTimeString('en-GB', { hour12: false });
+  const t = new Date().toLocaleTimeString('en-GB',{hour12:false});
   const div = document.createElement('div');
-  div.className = `log-${type}`;
-  div.textContent = `[${t}] ${msg}`;
+  div.className = 'log-' + type;
+  div.textContent = '[' + t + '] ' + msg;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
 }
 
-renderSteps(0);
-log('VoidInstaller started');
-log('Checking system...');
-
-await listen('install-progress', e => {
-  const { msg, pct } = e.payload;
-  document.getElementById('bar').style.width = Math.max(0, pct) + '%';
-  document.getElementById('status').textContent = msg;
-  renderSteps(pct);
-
-  if (pct === -1) {
-    log(msg, 'error');
-    document.getElementById('status').style.color = 'var(--red)';
-  } else if (msg.includes('✓') || msg.includes('complete') || pct >= 100) {
-    log(msg, 'ok');
-  } else if (msg.toLowerCase().includes('fail') || msg.toLowerCase().includes('error')) {
-    log(msg, 'error');
-  } else {
-    log(msg, 'info');
-  }
-
-  if (pct >= 100) {
-    document.getElementById('status').style.color = 'var(--green)';
-    document.getElementById('launch-btn').style.display = 'block';
-    log('Installation complete!', 'ok');
-  }
-});
-
-try {
-  const installed = await invoke('check_installed');
-  if (installed) {
-    log('VoidEmulator already installed', 'ok');
-    document.getElementById('status').textContent = 'Already installed!';
-    document.getElementById('status').style.color = 'var(--green)';
-    document.getElementById('bar').style.width = '100%';
-    renderSteps(100);
-    document.getElementById('launch-btn').style.display = 'block';
-  } else {
-    log('Starting installation...');
-    await invoke('run_install');
-  }
-} catch(e) {
-  log('Error: ' + e, 'error');
-  document.getElementById('status').textContent = 'Error — check log';
-  document.getElementById('status').style.color = 'var(--red)';
+function setStatus(msg, color) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  if (color) el.style.color = color;
 }
 
-window.launchApp = async () => {
+function setBar(pct) {
+  document.getElementById('bar').style.width = Math.max(0, pct) + '%';
+}
+
+renderSteps(0);
+log('VoidInstaller started');
+
+async function init() {
   try {
-    log('Launching VoidEmulator...', 'ok');
-    await invoke('launch_app');
+    log('Checking Tauri API...');
+    if (!window.__TAURI__) {
+      log('ERROR: window.__TAURI__ not found!', 'error');
+      setStatus('Tauri API missing', 'var(--red)');
+      return;
+    }
+    log('Tauri API found', 'ok');
+
+    const { invoke } = window.__TAURI__.core;
+    const { listen } = window.__TAURI__.event;
+
+    await listen('install-progress', e => {
+      const { msg, pct } = e.payload;
+      setBar(pct);
+      setStatus(msg);
+      renderSteps(pct);
+      if (pct === -1) {
+        log(msg, 'error');
+        setStatus(msg, 'var(--red)');
+      } else if (pct >= 100) {
+        log(msg, 'ok');
+        setStatus('Installation complete!', 'var(--green)');
+        document.getElementById('launch-btn').style.display = 'block';
+      } else {
+        log(msg);
+      }
+    });
+
+    log('Checking if already installed...');
+    const installed = await invoke('check_installed');
+    log('check_installed returned: ' + installed);
+
+    if (installed) {
+      log('Already installed!', 'ok');
+      setStatus('Already installed!', 'var(--green)');
+      setBar(100);
+      renderSteps(100);
+      document.getElementById('launch-btn').style.display = 'block';
+    } else {
+      log('Starting installation...');
+      setStatus('Starting...');
+      await invoke('run_install');
+      log('run_install called, waiting for events...');
+    }
+  } catch(e) {
+    log('FATAL ERROR: ' + e, 'error');
+    setStatus('Error — see log', 'var(--red)');
+  }
+}
+
+window.launchApp = async function() {
+  try {
+    await window.__TAURI__.core.invoke('launch_app');
   } catch(e) {
     log('Launch error: ' + e, 'error');
   }
 };
+
+// Wait for DOM then init
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 </script>
 </body>
 </html>
