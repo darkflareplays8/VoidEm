@@ -1,8 +1,8 @@
 use std::process::Command;
-const VERSION: &str = env!("APP_VERSION");
 use std::path::PathBuf;
 use std::fs;
-use tauri::{AppHandle, Emitter};
+use std::sync::{Arc, Mutex};
+use tauri::{AppHandle, Manager, State};
 
 const INSTALL_DIR: &str = "C:\\Program Files\\VoidEmulator";
 const DATA_DIR: &str = "C:\\Program Files\\VoidEmulator\\data";
@@ -11,8 +11,10 @@ const IMAGES_DIR: &str = "C:\\Program Files\\VoidEmulator\\data\\images";
 const INSTANCES_DIR: &str = "C:\\Program Files\\VoidEmulator\\data\\instances";
 const RELEASE_JSON: &str = "https://raw.githubusercontent.com/darkflareplays8/VoidEm/main/release.json";
 
-fn send(app: &AppHandle, msg: &str, pct: i32) {
-    app.emit("install-progress", serde_json::json!({ "msg": msg, "pct": pct })).ok();
+#[derive(Default)]
+pub struct InstallState {
+    pub log: Mutex<Vec<(String, i32)>>,
+    pub done: Mutex<bool>,
 }
 
 #[tauri::command]
@@ -21,46 +23,55 @@ fn check_installed() -> bool {
 }
 
 #[tauri::command]
-async fn run_install(app: AppHandle) -> serde_json::Value {
-    let app2 = app.clone();
-    std::thread::spawn(move || {
-        let app = app2;
+fn get_progress(state: State<Arc<InstallState>>) -> serde_json::Value {
+    let log = state.log.lock().unwrap();
+    let done = state.done.lock().unwrap();
+    serde_json::json!({
+        "log": log.clone(),
+        "done": *done
+    })
+}
 
-        // Create all dirs
+#[tauri::command]
+fn start_install(state: State<Arc<InstallState>>) -> bool {
+    let state = Arc::clone(&state);
+    std::thread::spawn(move || {
+        let push = |msg: &str, pct: i32| {
+            state.log.lock().unwrap().push((msg.to_string(), pct));
+        };
+
         for dir in &[INSTALL_DIR, DATA_DIR, QEMU_DIR, IMAGES_DIR, INSTANCES_DIR] {
             fs::create_dir_all(dir).ok();
         }
 
-        send(&app, "Starting installation...", 1);
+        push("Starting installation...", 1);
 
-        // 1. Download QEMU
+        // 1. QEMU
         let qemu_exe = PathBuf::from(QEMU_DIR).join("qemu-system-i386.exe");
         if !qemu_exe.exists() {
-            send(&app, "Downloading QEMU emulator...", 3);
+            push("Downloading QEMU...", 5);
             let zip = PathBuf::from(DATA_DIR).join("qemu.zip");
-            if !ps_download(
-                "https://github.com/dirkarnez/qemu-portable/releases/download/20240822/qemu-portable-20240822-windows-amd64.zip",
-                &zip, &app, 3, 22
-            ) { send(&app, "QEMU download failed!", -1); return; }
-            send(&app, "Extracting QEMU...", 23);
+            if !ps_download("https://github.com/dirkarnez/qemu-portable/releases/download/20240822/qemu-portable-20240822-windows-amd64.zip", &zip) {
+                push("QEMU download failed!", -1); return;
+            }
+            push("Extracting QEMU...", 22);
             ps_extract(&zip, &PathBuf::from(QEMU_DIR));
             fs::remove_file(&zip).ok();
             if let Some(found) = find_file(&PathBuf::from(QEMU_DIR), "qemu-system-i386.exe") {
                 if found != qemu_exe { fs::copy(&found, &qemu_exe).ok(); }
             }
         }
-        send(&app, "QEMU ready ✓", 25);
+        push("QEMU ready", 25);
 
-        // 2. Download ADB
+        // 2. ADB
         let adb_exe = PathBuf::from(QEMU_DIR).join("adb.exe");
         if !adb_exe.exists() {
-            send(&app, "Downloading ADB tools...", 27);
+            push("Downloading ADB tools...", 27);
             let zip = PathBuf::from(DATA_DIR).join("adb.zip");
-            if !ps_download(
-                "https://dl.google.com/android/repository/platform-tools-latest-windows.zip",
-                &zip, &app, 27, 42
-            ) { send(&app, "ADB download failed!", -1); return; }
-            send(&app, "Extracting ADB...", 43);
+            if !ps_download("https://dl.google.com/android/repository/platform-tools-latest-windows.zip", &zip) {
+                push("ADB download failed!", -1); return;
+            }
+            push("Extracting ADB...", 43);
             let tmp = PathBuf::from(DATA_DIR).join("pt_tmp");
             ps_extract(&zip, &tmp);
             let pt = tmp.join("platform-tools");
@@ -71,44 +82,40 @@ async fn run_install(app: AppHandle) -> serde_json::Value {
             fs::remove_dir_all(&tmp).ok();
             fs::remove_file(&zip).ok();
         }
-        send(&app, "ADB ready ✓", 47);
+        push("ADB ready", 47);
 
-        // 3. Download Android image
+        // 3. Android image
         let base_img = PathBuf::from(IMAGES_DIR).join("android.img");
         if !base_img.exists() {
-            send(&app, "Downloading Android-x86 4.4 image (~300MB)...", 49);
+            push("Downloading Android-x86 (~300MB)...", 49);
             let iso = PathBuf::from(IMAGES_DIR).join("android.iso");
-            if !ps_download(
-                "https://sourceforge.net/projects/android-x86/files/Release%204.4-r5/android-x86-4.4-r5.iso/download",
-                &iso, &app, 49, 85
-            ) { send(&app, "Android download failed!", -1); return; }
-            send(&app, "Creating disk image...", 86);
+            if !ps_download("https://sourceforge.net/projects/android-x86/files/Release%204.4-r5/android-x86-4.4-r5.iso/download", &iso) {
+                push("Android download failed!", -1); return;
+            }
+            push("Creating disk image...", 86);
             Command::new(PathBuf::from(QEMU_DIR).join("qemu-img.exe"))
                 .args(["create", "-f", "raw", base_img.to_str().unwrap(), "4G"])
                 .output().ok();
             fs::remove_file(&iso).ok();
         }
-        send(&app, "Android ready ✓", 88);
+        push("Android ready", 88);
 
-        // 4. Download VoidEmulator.exe from release.json
-        send(&app, "Fetching latest VoidEmulator version...", 89);
-        let release_json = ps_fetch(RELEASE_JSON);
-        let exe_url = match serde_json::from_str::<serde_json::Value>(&release_json) {
-            Ok(j) => j["url"].as_str().unwrap_or("").to_string(),
-            Err(_) => { send(&app, "Failed to read release.json!", -1); return; }
-        };
-        if exe_url.is_empty() { send(&app, "No download URL in release.json!", -1); return; }
+        // 4. VoidEmulator.exe
+        push("Fetching latest version...", 89);
+        let json = ps_fetch(RELEASE_JSON);
+        let url = serde_json::from_str::<serde_json::Value>(&json)
+            .ok()
+            .and_then(|j| j["url"].as_str().map(|s| s.to_string()))
+            .unwrap_or_default();
+        if url.is_empty() { push("Failed to read release.json!", -1); return; }
 
-        send(&app, "Downloading VoidEmulator.exe...", 90);
+        push("Downloading VoidEmulator.exe...", 90);
         let exe_dest = PathBuf::from(INSTALL_DIR).join("VoidEmulator.exe");
-        if !ps_download(&exe_url, &exe_dest, &app, 90, 96) {
-            send(&app, "VoidEmulator download failed!", -1);
-            return;
-        }
-        send(&app, "VoidEmulator installed ✓", 97);
+        if !ps_download(&url, &exe_dest) { push("VoidEmulator download failed!", -1); return; }
+        push("VoidEmulator installed", 97);
 
-        // 5. Create shortcuts
-        send(&app, "Creating shortcuts...", 98);
+        // 5. Shortcuts
+        push("Creating shortcuts...", 98);
         create_shortcut(
             &PathBuf::from(INSTALL_DIR).join("VoidEmulator.exe"),
             &PathBuf::from(std::env::var("APPDATA").unwrap_or_default())
@@ -120,32 +127,26 @@ async fn run_install(app: AppHandle) -> serde_json::Value {
                 .join("Desktop\\VoidEmulator.lnk")
         );
 
-        send(&app, "Installation complete! 🚀", 100);
+        push("Installation complete!", 100);
+        *state.done.lock().unwrap() = true;
     });
-    serde_json::json!({ "success": true })
+    true
 }
 
 #[tauri::command]
 fn launch_app() {
-    Command::new(PathBuf::from(INSTALL_DIR).join("VoidEmulator.exe"))
-        .spawn().ok();
+    Command::new(PathBuf::from(INSTALL_DIR).join("VoidEmulator.exe")).spawn().ok();
 }
 
-fn ps_download(url: &str, dest: &PathBuf, app: &AppHandle, pct_start: i32, pct_end: i32) -> bool {
-    send(app, &format!("Downloading... 0%"), pct_start);
-    let result = Command::new("powershell")
+fn ps_download(url: &str, dest: &PathBuf) -> bool {
+    Command::new("powershell")
         .args(["-Command", &format!(
             "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '{}' -OutFile '{}'",
             url, dest.to_str().unwrap()
         )])
-        .output();
-    match result {
-        Ok(o) if o.status.success() => {
-            send(app, "Download complete", pct_end);
-            true
-        }
-        _ => false
-    }
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
 }
 
 fn ps_extract(zip: &PathBuf, dest: &PathBuf) {
@@ -161,8 +162,7 @@ fn ps_extract(zip: &PathBuf, dest: &PathBuf) {
 fn ps_fetch(url: &str) -> String {
     Command::new("powershell")
         .args(["-Command", &format!(
-            "$ProgressPreference='SilentlyContinue'; (Invoke-WebRequest -Uri '{}').Content",
-            url
+            "$ProgressPreference='SilentlyContinue'; (Invoke-WebRequest -Uri '{}').Content", url
         )])
         .output()
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
@@ -190,9 +190,13 @@ fn create_shortcut(target: &PathBuf, shortcut: &PathBuf) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let state = Arc::new(InstallState::default());
     tauri::Builder::default()
+        .manage(state)
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![check_installed, run_install, launch_app])
+        .invoke_handler(tauri::generate_handler![
+            check_installed, start_install, get_progress, launch_app
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

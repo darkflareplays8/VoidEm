@@ -47,18 +47,21 @@ const STEPS = [
   { label: 'Shortcuts',  done: 100 },
 ];
 
+let lastLogCount = 0;
+
 function renderSteps(pct) {
   document.getElementById('steps').innerHTML = STEPS.map(s => {
     const done = pct >= s.done;
     const active = !done && pct >= s.done - 30;
     const color = done ? 'var(--green)' : active ? 'var(--yellow)' : 'var(--dim)';
-    return `<div class="step" style="color:${color}"><span>${done?'✓':active?'◎':'○'}</span><span>${s.label}</span></div>`;
+    return '<div class="step" style="color:' + color + '"><span>' + (done?'✓':active?'◎':'○') + '</span><span>' + s.label + '</span></div>';
   }).join('');
 }
 
-function log(msg, type='info') {
+function log(msg, type) {
+  type = type || 'info';
   const el = document.getElementById('log');
-  const t = new Date().toLocaleTimeString('en-GB',{hour12:false});
+  const t = new Date().toLocaleTimeString('en-GB', {hour12:false});
   const div = document.createElement('div');
   div.className = 'log-' + type;
   div.textContent = '[' + t + '] ' + msg;
@@ -72,29 +75,18 @@ function setStatus(msg, color) {
   if (color) el.style.color = color;
 }
 
-function setBar(pct) {
-  document.getElementById('bar').style.width = Math.max(0, pct) + '%';
-}
-
 renderSteps(0);
-log('VoidInstaller started');
 
-async function init() {
+async function poll() {
   try {
-    log('Checking Tauri API...');
-    if (!window.__TAURI__) {
-      log('ERROR: window.__TAURI__ not found!', 'error');
-      setStatus('Tauri API missing', 'var(--red)');
-      return;
-    }
-    log('Tauri API found', 'ok');
+    const invoke = window.__TAURI__.core.invoke;
+    const result = await invoke('get_progress');
+    const entries = result.log;
 
-    const { invoke } = window.__TAURI__.core;
-    const { listen } = window.__TAURI__.event;
-
-    await listen('install-progress', e => {
-      const { msg, pct } = e.payload;
-      setBar(pct);
+    // Only process new entries
+    for (let i = lastLogCount; i < entries.length; i++) {
+      const [msg, pct] = entries[i];
+      document.getElementById('bar').style.width = Math.max(0, pct) + '%';
       setStatus(msg);
       renderSteps(pct);
       if (pct === -1) {
@@ -105,28 +97,44 @@ async function init() {
         setStatus('Installation complete!', 'var(--green)');
         document.getElementById('launch-btn').style.display = 'block';
       } else {
-        log(msg);
+        log(msg, 'info');
       }
-    });
+    }
+    lastLogCount = entries.length;
 
-    log('Checking if already installed...');
+    if (!result.done) {
+      setTimeout(poll, 500);
+    }
+  } catch(e) {
+    log('Poll error: ' + e, 'error');
+    setStatus('Error — see log', 'var(--red)');
+  }
+}
+
+async function init() {
+  try {
+    if (!window.__TAURI__) {
+      log('ERROR: Tauri API not found!', 'error');
+      setStatus('Tauri API missing', 'var(--red)');
+      return;
+    }
+    const invoke = window.__TAURI__.core.invoke;
+
     const installed = await invoke('check_installed');
-    log('check_installed returned: ' + installed);
-
     if (installed) {
       log('Already installed!', 'ok');
       setStatus('Already installed!', 'var(--green)');
-      setBar(100);
+      document.getElementById('bar').style.width = '100%';
       renderSteps(100);
       document.getElementById('launch-btn').style.display = 'block';
-    } else {
-      log('Starting installation...');
-      setStatus('Starting...');
-      await invoke('run_install');
-      log('run_install called, waiting for events...');
+      return;
     }
+
+    log('Starting installation...');
+    await invoke('start_install');
+    poll();
   } catch(e) {
-    log('FATAL ERROR: ' + e, 'error');
+    log('ERROR: ' + e, 'error');
     setStatus('Error — see log', 'var(--red)');
   }
 }
@@ -139,7 +147,6 @@ window.launchApp = async function() {
   }
 };
 
-// Wait for DOM then init
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
