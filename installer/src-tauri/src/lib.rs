@@ -22,6 +22,8 @@ pub struct InstallState {
 #[tauri::command]
 fn check_installed() -> bool {
     PathBuf::from(INSTALL_DIR).join("VoidEmulator.exe").exists()
+        && PathBuf::from(QEMU_DIR).join("qemu-system-i386.exe").exists()
+        && PathBuf::from(IMAGES_DIR).join("android.img").exists()
 }
 
 #[tauri::command]
@@ -152,8 +154,9 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
 }
 
 #[tauri::command]
-fn launch_app() {
-    Command::new(PathBuf::from(INSTALL_DIR).join("VoidEmulator.exe")).spawn().ok();
+fn launch_app(app: tauri::AppHandle) -> Result<(), String> {
+    let exe = PathBuf::from(INSTALL_DIR).join("VoidEmulator.exe");
+    tauri_plugin_opener::open_path(exe, None::<&str>).map_err(|e| e.to_string())
 }
 
 fn http_download_progress(url: &str, dest: &PathBuf, label: &str, pct_start: i32, pct_end: i32, state: &Arc<InstallState>) -> Result<(), String> {
@@ -219,6 +222,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(state)
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             check_installed, start_install, get_progress, launch_app
         ])
