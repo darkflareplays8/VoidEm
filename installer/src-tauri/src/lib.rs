@@ -50,7 +50,7 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         let qemu_exe = PathBuf::from(QEMU_DIR).join("qemu-system-i386.exe");
         if !qemu_exe.exists() {
             push("Downloading QEMU (174MB)...", 3);
-            let installer = PathBuf::from(DATA_DIR).join("qemu-setup.exe");
+            let installer = std::env::temp_dir().join("qemu-setup.exe");
             if let Err(e) = http_download(QEMU_URL, &installer) {
                 push(&format!("QEMU download failed: {}", e), -1); return;
             }
@@ -78,18 +78,18 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         let adb_exe = PathBuf::from(QEMU_DIR).join("adb.exe");
         if !adb_exe.exists() {
             push("Downloading ADB tools...", 27);
-            let zip = PathBuf::from(DATA_DIR).join("adb.zip");
+            let zip = std::env::temp_dir().join("adb.zip");
             if let Err(e) = http_download("https://dl.google.com/android/repository/platform-tools-latest-windows.zip", &zip) {
                 push(&format!("ADB download failed: {}", e), -1); return;
             }
             push("Extracting ADB...", 43);
-            ps_extract_hidden(&zip, &PathBuf::from(DATA_DIR).join("pt_tmp"));
-            let pt = PathBuf::from(DATA_DIR).join("pt_tmp").join("platform-tools");
+            ps_extract_hidden(&zip, &std::env::temp_dir().join("pt_tmp"));
+            let pt = std::env::temp_dir().join("pt_tmp").join("platform-tools");
             for f in &["adb.exe", "AdbWinApi.dll", "AdbWinUsbApi.dll"] {
                 let src = pt.join(f);
                 if src.exists() { fs::copy(&src, PathBuf::from(QEMU_DIR).join(f)).ok(); }
             }
-            fs::remove_dir_all(PathBuf::from(DATA_DIR).join("pt_tmp")).ok();
+            fs::remove_dir_all(std::env::temp_dir().join("pt_tmp")).ok();
             fs::remove_file(&zip).ok();
         }
         push("ADB ready", 47);
@@ -98,7 +98,7 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         let base_img = PathBuf::from(IMAGES_DIR).join("android.img");
         if !base_img.exists() {
             push("Downloading Android-x86 (~300MB)...", 49);
-            let iso = PathBuf::from(IMAGES_DIR).join("android.iso");
+            let iso = std::env::temp_dir().join("android.iso");
             if let Err(e) = http_download("https://sourceforge.net/projects/android-x86/files/Release%204.4-r5/android-x86-4.4-r5.iso/download", &iso) {
                 push(&format!("Android download failed: {}", e), -1); return;
             }
