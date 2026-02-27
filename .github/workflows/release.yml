@@ -31,11 +31,11 @@ jobs:
           cd installer
           npm install
           npm run build
-      - name: Find exe
+      - name: Confirm build output
         shell: pwsh
         run: |
-          Write-Host "Searching entire workspace for exe files..."
-          Get-ChildItem -Recurse -Filter "*.exe" | Select-Object FullName
+          $files = Get-ChildItem -Recurse -Filter "*.exe" | Select-Object FullName, Length
+          $files | ForEach-Object { Write-Host "Found: $($_.FullName) ($([math]::Round($_.Length/1MB, 2)) MB)" }
       - name: Get version
         id: ver
         shell: bash
@@ -49,12 +49,12 @@ jobs:
             **Download VoidInstaller-Setup.exe** to install VoidEmulator on your PC.
             The installer sets everything up automatically.
             Support: https://discord.gg/XUe82svaAr
-          files: |
-            target/release/voidinstaller.exe
+          files: target/release/bundle/nsis/VoidInstaller_*_x64-setup.exe
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-emulator:
     runs-on: windows-latest
     steps:
@@ -81,11 +81,11 @@ jobs:
           cd emulator
           npm install
           npm run build
-      - name: Find exe
+      - name: Confirm build output
         shell: pwsh
         run: |
-          Write-Host "Searching entire workspace for exe files..."
-          Get-ChildItem -Recurse -Filter "*.exe" | Select-Object FullName
+          $files = Get-ChildItem -Recurse -Filter "*.exe" | Select-Object FullName, Length
+          $files | ForEach-Object { Write-Host "Found: $($_.FullName) ($([math]::Round($_.Length/1MB, 2)) MB)" }
       - name: Get version
         id: ver
         shell: bash
@@ -93,7 +93,6 @@ jobs:
       - name: Upload release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            target/release/voidemulator.exe
+          files: target/release/voidemulator.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
