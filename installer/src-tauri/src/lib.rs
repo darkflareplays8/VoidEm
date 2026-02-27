@@ -46,7 +46,8 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
 
         // 1. QEMU
         let qemu_exe = PathBuf::from(QEMU_DIR).join("qemu-system-i386.exe");
-        if !qemu_exe.exists() {
+        let qemu_default = PathBuf::from("C:\\Program Files\\qemu\\qemu-system-i386.exe");
+        if !qemu_exe.exists() && !qemu_default.exists() {
             let installer = std::env::temp_dir().join("qemu-setup.exe");
             if let Err(e) = http_download_progress(QEMU_URL, &installer, "QEMU", 3, 20, &state) {
                 push(&format!("QEMU download failed: {}", e), -1); return;
@@ -57,14 +58,22 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
                 .creation_flags(0x08000000)
                 .status().ok();
             fs::remove_file(&installer).ok();
-            if !qemu_exe.exists() {
-                let default_dir = PathBuf::from("C:\\Program Files\\qemu");
-                if default_dir.exists() {
-                    if let Ok(entries) = fs::read_dir(&default_dir) {
-                        for e in entries.flatten() {
-                            fs::copy(e.path(), PathBuf::from(QEMU_DIR).join(e.file_name())).ok();
-                        }
+            // Copy from default install location to our dir
+            let default_dir = PathBuf::from("C:\\Program Files\\qemu");
+            if default_dir.exists() {
+                if let Ok(entries) = fs::read_dir(&default_dir) {
+                    for e in entries.flatten() {
+                        fs::copy(e.path(), PathBuf::from(QEMU_DIR).join(e.file_name())).ok();
                     }
+                }
+            }
+        } else if qemu_default.exists() && !qemu_exe.exists() {
+            // Already installed in default location, just copy to our dir
+            push("Copying QEMU to VoidEmulator dir...", 20);
+            let default_dir = PathBuf::from("C:\\Program Files\\qemu");
+            if let Ok(entries) = fs::read_dir(&default_dir) {
+                for e in entries.flatten() {
+                    fs::copy(e.path(), PathBuf::from(QEMU_DIR).join(e.file_name())).ok();
                 }
             }
         }
