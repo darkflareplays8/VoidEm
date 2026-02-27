@@ -126,10 +126,13 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
             .unwrap_or_default();
         if url.is_empty() { push("No URL in release.json!", -1); return; }
 
+        let exe_tmp = std::env::temp_dir().join("VoidEmulator.exe");
         let exe_dest = PathBuf::from(INSTALL_DIR).join("VoidEmulator.exe");
-        if let Err(e) = http_download_progress(&url, &exe_dest, "VoidEmulator", 90, 96, &state) {
+        if let Err(e) = http_download_progress(&url, &exe_tmp, "VoidEmulator", 90, 96, &state) {
             push(&format!("VoidEmulator download failed: {}", e), -1); return;
         }
+        fs::copy(&exe_tmp, &exe_dest).map_err(|e| e.to_string()).ok();
+        fs::remove_file(&exe_tmp).ok();
         push("VoidEmulator installed ✓", 97);
 
         // 5. Shortcuts
