@@ -50,15 +50,29 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         let qemu_exe = PathBuf::from(QEMU_DIR).join("qemu-system-i386.exe");
         if !qemu_exe.exists() {
             push("Downloading QEMU...", 5);
-            let zip = PathBuf::from(DATA_DIR).join("qemu.zip");
-            if !ps_download("https://github.com/dirkarnez/qemu-portable/releases/download/20240822/qemu-portable-20240822-windows-amd64.zip", &zip) {
+            let installer = PathBuf::from(DATA_DIR).join("qemu-setup.exe");
+            if !ps_download("https://qemu.weilnetz.de/w64/qemu-w64-setup-20251217.exe", &installer) {
                 push("QEMU download failed!", -1); return;
             }
-            push("Extracting QEMU...", 22);
-            ps_extract(&zip, &PathBuf::from(QEMU_DIR));
-            fs::remove_file(&zip).ok();
-            if let Some(found) = find_file(&PathBuf::from(QEMU_DIR), "qemu-system-i386.exe") {
-                if found != qemu_exe { fs::copy(&found, &qemu_exe).ok(); }
+            push("Installing QEMU silently...", 18);
+            // Silent install to our dir
+            let install_path = PathBuf::from(QEMU_DIR);
+            Command::new(&installer)
+                .args(["/S", &format!("/D={}", install_path.to_str().unwrap())])
+                .output().ok();
+            fs::remove_file(&installer).ok();
+            // QEMU installer puts files directly in the dir
+            if !qemu_exe.exists() {
+                // Try default install location
+                let default = PathBuf::from("C:\\Program Files\\qemu\\qemu-system-i386.exe");
+                if default.exists() {
+                    // Copy all qemu files over
+                    if let Ok(entries) = fs::read_dir("C:\\Program Files\\qemu") {
+                        for e in entries.flatten() {
+                            fs::copy(e.path(), PathBuf::from(QEMU_DIR).join(e.file_name())).ok();
+                        }
+                    }
+                }
             }
         }
         push("QEMU ready", 25);
