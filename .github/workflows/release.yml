@@ -49,7 +49,7 @@ jobs:
             **Download VoidInstaller-Setup.exe** to install VoidEmulator on your PC.
             The installer sets everything up automatically.
             Support: https://discord.gg/XUe82svaAr
-          files: target/release/bundle/nsis/VoidInstaller_*_x64-setup.exe
+          files: target/release/voidinstaller.exe
           draft: false
           prerelease: false
         env:
