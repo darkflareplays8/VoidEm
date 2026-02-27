@@ -30,7 +30,15 @@ jobs:
         run: |
           cd installer
           npm install
-          npm run build
+          $attempts = 0
+          do {
+            $attempts++
+            Write-Host "Build attempt $attempts..."
+            npm run build
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempts -lt 3) { Write-Host "Retrying in 10s..."; Start-Sleep 10 }
+          } while ($attempts -lt 3)
+          exit $LASTEXITCODE
       - name: Confirm build output
         shell: pwsh
         run: |
@@ -80,7 +88,15 @@ jobs:
         run: |
           cd emulator
           npm install
-          npm run build
+          $attempts = 0
+          do {
+            $attempts++
+            Write-Host "Build attempt $attempts..."
+            npm run build
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempts -lt 3) { Write-Host "Retrying in 10s..."; Start-Sleep 10 }
+          } while ($attempts -lt 3)
+          exit $LASTEXITCODE
       - name: Confirm build output
         shell: pwsh
         run: |
