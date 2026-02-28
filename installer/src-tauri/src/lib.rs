@@ -13,7 +13,7 @@ const QEMU_URL: &str = "https://qemu.weilnetz.de/w64/2025/qemu-w64-setup-2025122
 fn install_dir() -> PathBuf {
     PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| "C:\\Users\\Public".into())).join("VoidEmulator")
 }
-fn qemu_dir() -> PathBuf { install_dir().join("data").join("qemu") }
+fn qemu_dir() -> PathBuf { PathBuf::from("C:\\Program Files\\qemu") }
 fn images_dir() -> PathBuf { install_dir().join("data").join("images") }
 
 #[derive(Default)]
@@ -25,7 +25,7 @@ pub struct InstallState {
 #[tauri::command]
 fn check_installed() -> bool {
     install_dir().join("VoidEmulator.exe").exists()
-        && qemu_dir().join("qemu-system-i386.exe").exists()
+        && PathBuf::from("C:\\Program Files\\qemu\\qemu-system-i386.exe").exists()
         && images_dir().join("android.img").exists()
 }
 
@@ -56,38 +56,20 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         }
         push("Starting installation...", 1);
 
-        // 1. QEMU
-        let qemu_exe = qemu.join("qemu-system-i386.exe");
-        let qemu_default = PathBuf::from("C:\\Program Files\\qemu\\qemu-system-i386.exe");
-        if !qemu_exe.exists() && !qemu_default.exists() {
+        // 1. QEMU - install to default location, use from there
+        let qemu_default_dir = PathBuf::from("C:\\Program Files\\qemu");
+        let qemu_default_exe = qemu_default_dir.join("qemu-system-i386.exe");
+        if !qemu_default_exe.exists() {
             let installer = std::env::temp_dir().join("qemu-setup.exe");
             if let Err(e) = http_download_progress(QEMU_URL, &installer, "QEMU", 3, 20, &state) {
                 push(&format!("QEMU download failed: {}", e), -1); return;
             }
-            push("Installing QEMU...", 21);
+            push("Installing QEMU (may need a moment)...", 21);
+            // Run installer normally - will go to default Program Files location
             Command::new(&installer)
-                .args(["/S", &format!("/D={}", qemu.to_str().unwrap())])
-                .creation_flags(0x08000000)
+                .arg("/S")
                 .status().ok();
             fs::remove_file(&installer).ok();
-            // Copy from default location if needed
-            if !qemu_exe.exists() {
-                let default_dir = PathBuf::from("C:\\Program Files\\qemu");
-                if default_dir.exists() {
-                    if let Ok(entries) = fs::read_dir(&default_dir) {
-                        for e in entries.flatten() {
-                            fs::copy(e.path(), qemu.join(e.file_name())).ok();
-                        }
-                    }
-                }
-            }
-        } else if qemu_default.exists() && !qemu_exe.exists() {
-            push("Copying QEMU files...", 20);
-            if let Ok(entries) = fs::read_dir("C:\\Program Files\\qemu") {
-                for e in entries.flatten() {
-                    fs::copy(e.path(), qemu.join(e.file_name())).ok();
-                }
-            }
         }
         push("QEMU ready ✓", 25);
 
