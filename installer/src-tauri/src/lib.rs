@@ -8,7 +8,7 @@ use tauri::State;
 use std::os::windows::process::CommandExt;
 
 const RELEASE_JSON: &str = "https://raw.githubusercontent.com/darkflareplays8/VoidEm/main/release.json";
-const QEMU_URL: &str = "https://qemu.weilnetz.de/w64/2025/qemu-w64-setup-20251224.exe";
+const QEMU_URL: &str = "https://github.com/darkflareplays8/VoidEm/releases/download/Asset%2FQuemu/qemu.zip";
 
 fn install_dir() -> PathBuf {
     PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| "C:\\Users\\Public".into())).join("VoidEmulator")
@@ -25,7 +25,7 @@ pub struct InstallState {
 #[tauri::command]
 fn check_installed() -> bool {
     install_dir().join("VoidEmulator.exe").exists()
-        && PathBuf::from("C:\\Program Files\\qemu\\qemu-system-i386.exe").exists()
+        && qemu_dir().join("qemu-system-i386.exe").exists()
         && images_dir().join("android.img").exists()
 }
 
@@ -56,20 +56,61 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         }
         push("Starting installation...", 1);
 
-        // 1. QEMU - install to default location, use from there
-        let qemu_default_dir = PathBuf::from("C:\\Program Files\\qemu");
-        let qemu_default_exe = qemu_default_dir.join("qemu-system-i386.exe");
-        if !qemu_default_exe.exists() {
+        // 1. QEMU - extract from installer using 7z (no admin needed)
+        let qemu_exe = qemu.join("qemu-system-i386.exe");
+        if !qemu_exe.exists() {
             let installer = std::env::temp_dir().join("qemu-setup.exe");
             if let Err(e) = http_download_progress(QEMU_URL, &installer, "QEMU", 3, 20, &state) {
                 push(&format!("QEMU download failed: {}", e), -1); return;
             }
-            push("Installing QEMU (may need a moment)...", 21);
-            // Run installer normally - will go to default Program Files location
-            Command::new(&installer)
-                .arg("/S")
-                .status().ok();
+            push("Extracting QEMU (no admin needed)...", 21);
+            // Use 7z if available, otherwise try innounp, otherwise try direct run
+            let seven_zip_paths = vec![
+                PathBuf::from("C:\\Program Files\\7-Zip\\7z.exe"),
+                PathBuf::from("C:\\Program Files (x86)\\7-Zip\\7z.exe"),
+            ];
+            let mut extracted = false;
+            for sz in &seven_zip_paths {
+                if sz.exists() {
+                    let result = Command::new(sz)
+                        .args(["x", installer.to_str().unwrap(), &format!("-o{}", qemu.to_str().unwrap()), "-y"])
+                        .creation_flags(0x08000000)
+                        .status();
+                    if result.map(|s| s.success()).unwrap_or(false) {
+                        extracted = true;
+                        break;
+                    }
+                }
+            }
+            if !extracted {
+                // Fallback: use powershell to extract via 7zip COM or expand
+                push("Trying PowerShell extraction...", 22);
+                Command::new("powershell")
+                    .args(["-WindowStyle", "Hidden", "-Command", &format!(
+                        "& {{ $p = '{}'; $o = '{}'; $7z = (Get-Command 7z -ErrorAction SilentlyContinue)?.Source; if ($7z) {{ & $7z x $p "-o$o" -y }} }}",
+                        installer.to_str().unwrap(), qemu.to_str().unwrap()
+                    )])
+                    .creation_flags(0x08000000)
+                    .output().ok();
+            }
             fs::remove_file(&installer).ok();
+            // After extraction, NSIS puts files in $INSTDIR which maps to qemu dir
+            // Files might be in a subfolder, find and move them up
+            if !qemu_exe.exists() {
+                if let Ok(entries) = fs::read_dir(&qemu) {
+                    for e in entries.flatten() {
+                        let p = e.path();
+                        if p.is_dir() {
+                            if let Ok(sub) = fs::read_dir(&p) {
+                                for f in sub.flatten() {
+                                    let dest = qemu.join(f.file_name());
+                                    if !dest.exists() { fs::copy(f.path(), dest).ok(); }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         push("QEMU ready ✓", 25);
 
@@ -101,10 +142,19 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
                 push(&format!("Android download failed: {}", e), -1); return;
             }
             push("Creating disk image...", 87);
-            Command::new(qemu.join("qemu-img.exe"))
-                .args(["create", "-f", "raw", base_img.to_str().unwrap(), "4G"])
-                .creation_flags(0x08000000)
-                .output().ok();
+            let qemu_img = actual_qemu_dir.join("qemu-img.exe");
+            if qemu_img.exists() {
+                Command::new(&qemu_img)
+                    .args(["create", "-f", "raw", base_img.to_str().unwrap(), "4G"])
+                    .creation_flags(0x08000000)
+                    .output().ok();
+            } else {
+                // Fallback: use fsutil to create a blank 4GB file
+                Command::new("fsutil")
+                    .args(["file", "createnew", base_img.to_str().unwrap(), "4294967296"])
+                    .creation_flags(0x08000000)
+                    .output().ok();
+            }
             fs::remove_file(&iso).ok();
         }
         push("Android ready ✓", 88);
