@@ -211,13 +211,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-tags: true
+          fetch-depth: 0
       - name: Get version
         id: ver
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
       - name: Get tag message
         id: tag_msg
         run: |
+          git fetch --tags --force
           BODY=$(git tag -l --format='%(contents:body)' "${{ github.ref_name }}" | head -20)
           echo "BODY<<EOF" >> $GITHUB_OUTPUT
           echo "$BODY" >> $GITHUB_OUTPUT
