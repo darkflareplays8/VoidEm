@@ -59,19 +59,19 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         // 1. QEMU - download portable zip, extract to AppData (no admin needed)
         let qemu_exe = qemu.join("qemu-system-i386.exe");
         if !qemu_exe.exists() {
-            let zip = std::env::temp_dir().join("qemu.zip");
-            if let Err(e) = http_download_progress(QEMU_URL, &zip, "QEMU", 3, 20, &state) {
+            let downloads_dir = install_dir().join("downloads");
+            fs::create_dir_all(&downloads_dir).ok();
+            let zip = downloads_dir.join("qemu.zip");
+            if let Err(e) = http_download_resume(QEMU_URL, &zip, "QEMU", 3, 20, &state) {
                 push(&format!("QEMU download failed: {}", e), -1); return;
             }
             push("Extracting QEMU...", 21);
-            // Extract to parent dir - zip contains a 'qemu' folder so it becomes our qemu dir
+            // Extract to parent dir - zip contains 'qemu' folder so it becomes our qemu dir
             let qemu_parent = qemu.parent().unwrap_or(&qemu);
             fs::create_dir_all(&qemu_parent).ok();
-            Command::new("powershell")
-                .args(["-WindowStyle", "Hidden", "-Command", &format!(
-                    "$ProgressPreference='SilentlyContinue'; Expand-Archive -Path '{}' -DestinationPath '{}' -Force",
-                    zip.to_str().unwrap(), qemu_parent.to_str().unwrap()
-                )])
+            // Use tar (built into Windows 10/11) - much faster than Expand-Archive
+            Command::new("tar")
+                .args(["-xf", zip.to_str().unwrap(), "-C", qemu_parent.to_str().unwrap()])
                 .creation_flags(0x08000000)
                 .output().ok();
             fs::remove_file(&zip).ok();
@@ -84,13 +84,19 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         // 2. ADB
         let adb_exe = qemu.join("adb.exe");
         if !adb_exe.exists() {
-            let zip = std::env::temp_dir().join("adb.zip");
-            if let Err(e) = http_download_progress("https://dl.google.com/android/repository/platform-tools-latest-windows.zip", &zip, "ADB", 27, 44, &state) {
+            let downloads_dir = install_dir().join("downloads");
+            fs::create_dir_all(&downloads_dir).ok();
+            let zip = downloads_dir.join("adb.zip");
+            if let Err(e) = http_download_resume("https://dl.google.com/android/repository/platform-tools-latest-windows.zip", &zip, "ADB", 27, 44, &state) {
                 push(&format!("ADB download failed: {}", e), -1); return;
             }
             push("Extracting ADB...", 45);
             let tmp = std::env::temp_dir().join("void_pt_tmp");
-            ps_extract_hidden(&zip, &tmp);
+            fs::create_dir_all(&tmp).ok();
+            Command::new("tar")
+                .args(["-xf", zip.to_str().unwrap(), "-C", tmp.to_str().unwrap()])
+                .creation_flags(0x08000000)
+                .output().ok();
             let pt = tmp.join("platform-tools");
             for f in &["adb.exe", "AdbWinApi.dll", "AdbWinUsbApi.dll"] {
                 let src = pt.join(f);
@@ -104,8 +110,10 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         // 3. Android image
         let base_img = images.join("android.img");
         if !base_img.exists() {
-            let iso = std::env::temp_dir().join("android.iso");
-            if let Err(e) = http_download_progress("https://www.fosshub.com/Android-x86.html/android-x86-4.4-r5.iso", &iso, "Android", 49, 86, &state) {
+            let downloads_dir = install_dir().join("downloads");
+            fs::create_dir_all(&downloads_dir).ok();
+            let iso = downloads_dir.join("android.iso");
+            if let Err(e) = http_download_resume("https://www.fosshub.com/Android-x86.html/android-x86-4.4-r5.iso", &iso, "Android", 49, 86, &state) {
                 push(&format!("Android download failed: {}", e), -1); return;
             }
             push("Creating disk image...", 87);
@@ -155,7 +163,9 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
             }
         };
 
-        let exe_tmp = std::env::temp_dir().join("VoidEmulator.exe");
+        let downloads_dir = install_dir().join("downloads");
+        fs::create_dir_all(&downloads_dir).ok();
+        let exe_tmp = downloads_dir.join("VoidEmulator.exe");
         let exe_dest = install.join("VoidEmulator.exe");
         if let Err(e) = http_download_progress(&final_url, &exe_tmp, "VoidEmulator", 90, 96, &state) {
             push(&format!("VoidEmulator download failed: {}", e), -1); return;
@@ -182,6 +192,9 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
             )])
             .creation_flags(0x08000000)
             .output().ok();
+
+        // Clean up downloads folder
+        fs::remove_dir_all(install_dir().join("downloads")).ok();
 
         push("Installation complete!", 100);
         *state.done.lock().unwrap() = true;
@@ -233,6 +246,65 @@ fn prev_version_url(url: &str, version: &str) -> Option<String> {
         .replace(&format!("v{}", version), &format!("v{}", prev_ver))
         .replace(&format!("/{}/", version), &format!("/{}/", prev_ver));
     Some(prev_url)
+}
+
+fn http_download_resume(url: &str, dest: &PathBuf, label: &str, pct_start: i32, pct_end: i32, state: &Arc<InstallState>) -> Result<(), String> {
+    use std::io::{Write, Read, Seek, SeekFrom};
+    // Check how much we already have
+    let existing = dest.metadata().map(|m| m.len()).unwrap_or(0);
+    // HEAD request to get total size
+    let total = ureq::head(url).call()
+        .ok()
+        .and_then(|r| r.header("content-length").and_then(|v| v.parse::<u64>().ok()))
+        .unwrap_or(0);
+    // If already fully downloaded, skip
+    if total > 0 && existing >= total {
+        state.log.lock().unwrap().push((format!("{} already downloaded, skipping...", label), pct_end));
+        return Ok(());
+    }
+    // Open file for append if resuming, create if new
+    let mut file = if existing > 0 {
+        state.log.lock().unwrap().push((format!("Resuming {} from {:.1} MB...", label, existing as f64 / 1_048_576.0), pct_start));
+        fs::OpenOptions::new().append(true).open(dest).map_err(|e| e.to_string())?
+    } else {
+        fs::File::create(dest).map_err(|e| e.to_string())?
+    };
+    // Send Range header if resuming
+    let resp = if existing > 0 {
+        ureq::get(url)
+            .set("Range", &format!("bytes={}-", existing))
+            .call()
+            .map_err(|e| e.to_string())?
+    } else {
+        ureq::get(url).call().map_err(|e| e.to_string())?
+    };
+    let mut downloaded = existing;
+    let mut reader = resp.into_reader();
+    let mut buf = vec![0u8; 65536];
+    let mut last_pct = pct_start;
+    loop {
+        let n = reader.read(&mut buf).map_err(|e| e.to_string())?;
+        if n == 0 { break; }
+        file.write_all(&buf[..n]).map_err(|e| e.to_string())?;
+        downloaded += n as u64;
+        if total > 0 {
+            let progress = downloaded as f64 / total as f64;
+            let pct = pct_start + ((pct_end - pct_start) as f64 * progress) as i32;
+            if pct > last_pct {
+                last_pct = pct;
+                let mb_done = downloaded as f64 / 1_048_576.0;
+                let mb_total = total as f64 / 1_048_576.0;
+                state.log.lock().unwrap().push((
+                    format!("Downloading {}... {:.1}/{:.1} MB ({:.0}%)", label, mb_done, mb_total, progress * 100.0),
+                    pct
+                ));
+            }
+        } else {
+            let mb = downloaded as f64 / 1_048_576.0;
+            state.log.lock().unwrap().push((format!("Downloading {}... {:.1} MB", label, mb), pct_start));
+        }
+    }
+    Ok(())
 }
 
 fn http_download_progress(url: &str, dest: &PathBuf, label: &str, pct_start: i32, pct_end: i32, state: &Arc<InstallState>) -> Result<(), String> {
