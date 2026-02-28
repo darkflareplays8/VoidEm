@@ -25,21 +25,21 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-registry-${{ hashFiles('Cargo.lock') }}
           restore-keys: cargo-registry-
 
       - name: Cache Rust build
         uses: actions/cache@v4
         with:
           path: target
-          key: cargo-build-installer-${{ hashFiles('installer/src-tauri/src/**', 'installer/src-tauri/Cargo.toml', 'Cargo.lock') }}
+          key: cargo-build-installer-${{ hashFiles('Cargo.lock') }}
           restore-keys: cargo-build-installer-
 
       - name: Cache node_modules
         uses: actions/cache@v4
         with:
           path: installer/node_modules
-          key: npm-installer-${{ hashFiles('installer/package-lock.json') }}
+          key: npm-installer-${{ hashFiles('installer/package-lock.json', 'installer/package.json') }}
           restore-keys: npm-installer-
 
       - name: Sync version from release.json
@@ -106,21 +106,21 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-registry-${{ hashFiles('Cargo.lock') }}
           restore-keys: cargo-registry-
 
       - name: Cache Rust build
         uses: actions/cache@v4
         with:
           path: target
-          key: cargo-build-emulator-${{ hashFiles('emulator/src-tauri/src/**', 'emulator/src-tauri/Cargo.toml', 'Cargo.lock') }}
+          key: cargo-build-emulator-${{ hashFiles('Cargo.lock') }}
           restore-keys: cargo-build-emulator-
 
       - name: Cache node_modules
         uses: actions/cache@v4
         with:
           path: emulator/node_modules
-          key: npm-emulator-${{ hashFiles('emulator/package-lock.json') }}
+          key: npm-emulator-${{ hashFiles('emulator/package-lock.json', 'emulator/package.json') }}
           restore-keys: npm-emulator-
 
       - name: Sync version from release.json
