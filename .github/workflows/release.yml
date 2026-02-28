@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
 jobs:
-  warm-cache:
+  warm-cache-installer:
     if: github.ref == 'refs/heads/main'
     runs-on: windows-latest
     steps:
@@ -43,6 +43,45 @@ jobs:
         shell: pwsh
         run: |
           cd installer
+          npm install
+          npm run build
+        continue-on-error: true
+
+  warm-cache-emulator:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable-x86_64-pc-windows-msvc
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Cache Rust registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-registry-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-registry-
+      - name: Cache Rust build emulator
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: cargo-build-emulator-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-build-emulator-
+      - name: Cache node_modules emulator
+        uses: actions/cache@v4
+        with:
+          path: emulator/node_modules
+          key: npm-emulator-${{ hashFiles('emulator/package-lock.json', 'emulator/package.json') }}
+          restore-keys: npm-emulator-
+      - name: Build emulator to warm cache
+        shell: pwsh
+        run: |
+          cd emulator
           npm install
           npm run build
         continue-on-error: true
