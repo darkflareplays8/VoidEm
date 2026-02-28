@@ -193,10 +193,9 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
             .creation_flags(0x08000000)
             .output().ok();
 
-        // Clean up downloads folder
-        fs::remove_dir_all(install_dir().join("downloads")).ok();
-
         push("Installation complete!", 100);
+        // Only clean up downloads on success
+        fs::remove_dir_all(install_dir().join("downloads")).ok();
         *state.done.lock().unwrap() = true;
     });
     true

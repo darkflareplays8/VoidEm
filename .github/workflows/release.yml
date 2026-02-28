@@ -10,12 +10,38 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable-x86_64-pc-windows-msvc
+
+      - name: Cache Rust registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-registry-
+
+      - name: Cache Rust build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: cargo-build-installer-${{ hashFiles('installer/src-tauri/src/**', 'installer/src-tauri/Cargo.toml', 'Cargo.lock') }}
+          restore-keys: cargo-build-installer-
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: installer/node_modules
+          key: npm-installer-${{ hashFiles('installer/package-lock.json') }}
+          restore-keys: npm-installer-
+
       - name: Sync version from release.json
         shell: pwsh
         run: |
@@ -25,6 +51,7 @@ jobs:
           $conf.version = $ver
           $conf | ConvertTo-Json -Depth 10 | Set-Content installer/src-tauri/tauri.conf.json
           Write-Host "Set installer version to $ver"
+
       - name: Install and build
         shell: pwsh
         run: |
@@ -39,10 +66,12 @@ jobs:
             if ($attempts -lt 3) { Write-Host "Retrying in 10s..."; Start-Sleep 10 }
           } while ($attempts -lt 3)
           exit $LASTEXITCODE
+
       - name: Get version
         id: ver
         shell: bash
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
       - name: Upload release
         uses: softprops/action-gh-release@v2
         with:
@@ -62,12 +91,38 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable-x86_64-pc-windows-msvc
+
+      - name: Cache Rust registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-registry-
+
+      - name: Cache Rust build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: cargo-build-emulator-${{ hashFiles('emulator/src-tauri/src/**', 'emulator/src-tauri/Cargo.toml', 'Cargo.lock') }}
+          restore-keys: cargo-build-emulator-
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: emulator/node_modules
+          key: npm-emulator-${{ hashFiles('emulator/package-lock.json') }}
+          restore-keys: npm-emulator-
+
       - name: Sync version from release.json
         shell: pwsh
         run: |
@@ -78,6 +133,7 @@ jobs:
           $conf | ConvertTo-Json -Depth 10 | Set-Content emulator/src-tauri/tauri.conf.json
           (Get-Content emulator/src-tauri/src/lib.rs) -replace 'const CURRENT_VERSION: &str = "[^"]*"', "const CURRENT_VERSION: &str = `"$ver`"" | Set-Content emulator/src-tauri/src/lib.rs
           Write-Host "Set emulator version to $ver"
+
       - name: Install and build
         shell: pwsh
         run: |
@@ -92,10 +148,12 @@ jobs:
             if ($attempts -lt 3) { Write-Host "Retrying in 10s..."; Start-Sleep 10 }
           } while ($attempts -lt 3)
           exit $LASTEXITCODE
+
       - name: Get version
         id: ver
         shell: bash
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
       - name: Upload release
         uses: softprops/action-gh-release@v2
         with:
