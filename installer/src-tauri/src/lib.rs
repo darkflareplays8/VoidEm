@@ -64,31 +64,17 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
                 push(&format!("QEMU download failed: {}", e), -1); return;
             }
             push("Extracting QEMU...", 21);
-            fs::create_dir_all(&qemu).ok();
+            // Extract to parent dir - zip contains a 'qemu' folder so it becomes our qemu dir
+            let qemu_parent = qemu.parent().unwrap_or(&qemu);
+            fs::create_dir_all(&qemu_parent).ok();
             Command::new("powershell")
                 .args(["-WindowStyle", "Hidden", "-Command", &format!(
                     "$ProgressPreference='SilentlyContinue'; Expand-Archive -Path '{}' -DestinationPath '{}' -Force",
-                    zip.to_str().unwrap(), qemu.to_str().unwrap()
+                    zip.to_str().unwrap(), qemu_parent.to_str().unwrap()
                 )])
                 .creation_flags(0x08000000)
                 .output().ok();
             fs::remove_file(&zip).ok();
-            // If files landed in a subfolder, move them up
-            if !qemu_exe.exists() {
-                if let Ok(entries) = fs::read_dir(&qemu) {
-                    for e in entries.flatten() {
-                        if e.path().is_dir() {
-                            if let Ok(sub) = fs::read_dir(e.path()) {
-                                for f in sub.flatten() {
-                                    let dest = qemu.join(f.file_name());
-                                    if !dest.exists() { fs::copy(f.path(), dest).ok(); }
-                                }
-                            }
-                            fs::remove_dir_all(e.path()).ok();
-                        }
-                    }
-                }
-            }
             if !qemu_exe.exists() {
                 push("QEMU extraction failed!", -1); return;
             }
