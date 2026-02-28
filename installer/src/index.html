@@ -148,12 +148,8 @@ window.launchApp = async function() {
   btn.style.opacity = '0.7';
   try {
     await window.__TAURI__.core.invoke('launch_app');
-    log('VoidEmulator launched!', 'ok');
-    setTimeout(() => {
-      btn.disabled = false;
-      btn.innerHTML = 'Launch VoidEmulator &#9658;';
-      btn.style.opacity = '1';
-    }, 3000);
+    log('VoidEmulator launched! Closing installer...', 'ok');
+    setTimeout(() => { window.__TAURI__.core.invoke('close_installer'); }, 1500);
   } catch(e) {
     log('Launch error: ' + e, 'error');
     btn.disabled = false;

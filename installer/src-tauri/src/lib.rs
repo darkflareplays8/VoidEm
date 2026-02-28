@@ -176,20 +176,14 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
             &PathBuf::from(std::env::var("APPDATA").unwrap_or_default())
                 .join("Microsoft\\Windows\\Start Menu\\Programs\\VoidEmulator.lnk")
         );
-        // Desktop - try multiple locations
-        let desktop_paths = vec![
-            PathBuf::from(std::env::var("USERPROFILE").unwrap_or_default()).join("Desktop\\VoidEmulator.lnk"),
-            PathBuf::from(std::env::var("HOMEDRIVE").unwrap_or_default())
-                .join(std::env::var("HOMEPATH").unwrap_or_default())
-                .join("Desktop\\VoidEmulator.lnk"),
-            PathBuf::from("C:\\Users\\Public\\Desktop\\VoidEmulator.lnk"),
-        ];
-        for desktop in &desktop_paths {
-            if desktop.parent().map(|p| p.exists()).unwrap_or(false) {
-                create_shortcut(&exe_dest, desktop);
-                break;
-            }
-        }
+        // Desktop shortcut - use PowerShell to get real desktop path (handles OneDrive redirect)
+        Command::new("powershell")
+            .args(["-WindowStyle", "Hidden", "-Command", &format!(
+                "$ws = New-Object -ComObject WScript.Shell; $d = [Environment]::GetFolderPath('Desktop'); $s = $ws.CreateShortcut($d + '\\VoidEmulator.lnk'); $s.TargetPath = '{}'; $s.Save()",
+                exe_dest.to_str().unwrap()
+            )])
+            .creation_flags(0x08000000)
+            .output().ok();
 
         push("Installation complete!", 100);
         *state.done.lock().unwrap() = true;
@@ -299,6 +293,11 @@ fn create_shortcut(target: &PathBuf, shortcut: &PathBuf) {
         .output().ok();
 }
 
+#[tauri::command]
+fn close_installer(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let state = Arc::new(InstallState::default());
@@ -306,7 +305,7 @@ pub fn run() {
         .manage(state)
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
-            check_installed, start_install, get_progress, launch_app, open_discord
+            check_installed, start_install, get_progress, launch_app, open_discord, close_installer
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
