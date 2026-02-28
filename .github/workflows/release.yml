@@ -168,22 +168,36 @@ jobs:
       - name: Get version
         id: ver
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      - name: Get tag message
+        id: tag_msg
+        run: |
+          git fetch --tags --force
+          BODY=$(git tag -l --format='%(contents:body)' "${{ github.ref_name }}" | head -20)
+          echo "BODY<<EOF" >> $GITHUB_OUTPUT
+          echo "$BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Send Discord embed
         run: |
           VERSION="${{ steps.ver.outputs.VERSION }}"
-          curl -s -X POST "https://discord.com/api/webhooks/1477053553385279681/FaCuxuE0WoOr82pwIKyoZTeCTEe9nixg-o9TDs3gSHnF8Zt4fw3p4dJkPNU5b10iRMhM" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"embeds\": [{
-                \"title\": \"VoidEmulator v${VERSION} Released\",
-                \"color\": 9109759,
-                \"fields\": [
-                  { \"name\": \"Version\", \"value\": \"\`\`\`\\n${VERSION}\\n\`\`\`\", \"inline\": false },
-                  { \"name\": \"Release Details\", \"value\": \"https://github.com/darkflareplays8/VoidEm/releases/tag/v${VERSION}\", \"inline\": false },
-                  { \"name\": \"Source Code\", \"value\": \"https://github.com/darkflareplays8/VoidEm/tree/v${VERSION}\", \"inline\": false },
-                  { \"name\": \"Update\", \"value\": \"Simply relaunch the emulator!\", \"inline\": false },
-                  { \"name\": \"Installer\", \"value\": \"<#1476662691631468565>\", \"inline\": false }
+          SUMMARY="${{ steps.tag_msg.outputs.BODY }}"
+          if [ -z "$SUMMARY" ]; then
+            SUMMARY="No summary provided."
+          fi
+          # Escape for JSON
+          SUMMARY_ESC=$(echo "$SUMMARY" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read())[1:-1])")
+          curl -s -X POST "https://discord.com/api/webhooks/1477053553385279681/FaCuxuE0WoOr82pwIKyoZTeCTEe9nixg-o9TDs3gSHnF8Zt4fw3p4dJkPNU5b10iRMhM"             -H "Content-Type: application/json"             -d "{
+              "embeds": [{
+                "title": "VoidEmulator Update",
+                "color": 9109759,
+                "fields": [
+                  { "name": "Version", "value": "\`\`\`\n${VERSION}\n\`\`\`", "inline": false },
+                  { "name": "Summary", "value": "\`\`\`\n${SUMMARY_ESC}\n\`\`\`", "inline": false },
+                  { "name": "Release Details", "value": "https://github.com/darkflareplays8/VoidEm/releases/tag/v${VERSION}", "inline": false },
+                  { "name": "Source Code", "value": "https://github.com/darkflareplays8/VoidEm/tree/v${VERSION}", "inline": false },
+                  { "name": "Update", "value": "Simply relaunch the emulator!", "inline": false },
+                  { "name": "Installer", "value": "<#1476662691631468565>", "inline": false }
                 ],
-                \"footer\": { \"text\": \"VoidHub CI\" }
+                "footer": { "text": "VoidHub CI" }
               }]
             }"

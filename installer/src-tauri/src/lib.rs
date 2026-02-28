@@ -24,14 +24,9 @@ pub struct InstallState {
 
 #[tauri::command]
 fn check_installed() -> bool {
-    let ready = install_dir().join("VoidEmulator.exe").exists()
+    install_dir().join("VoidEmulator.exe").exists()
         && qemu_dir().join("qemu-system-i386.exe").exists()
-        && images_dir().join("android.img").exists();
-    if ready {
-        // Everything confirmed working - safe to clean up downloads now
-        fs::remove_dir_all(install_dir().join("downloads")).ok();
-    }
-    ready
+        && images_dir().join("android.img").exists()
 }
 
 #[tauri::command]

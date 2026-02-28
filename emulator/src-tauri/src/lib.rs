@@ -18,10 +18,17 @@ fn base_img() -> PathBuf { images_dir().join("android.img") }
 
 #[tauri::command]
 fn check_setup() -> serde_json::Value {
+    let qemu_ok = qemu_exe().exists();
+    let adb_ok = adb_exe().exists();
+    let image_ok = base_img().exists();
+    // Only clean downloads once everything is confirmed ready
+    if qemu_ok && adb_ok && image_ok {
+        fs::remove_dir_all(install_dir().join("downloads")).ok();
+    }
     serde_json::json!({
-        "qemu": qemu_exe().exists(),
-        "adb": adb_exe().exists(),
-        "image": base_img().exists(),
+        "qemu": qemu_ok,
+        "adb": adb_ok,
+        "image": image_ok,
         "qemu_path": qemu_exe().to_str().unwrap_or(""),
         "image_path": base_img().to_str().unwrap_or(""),
     })
