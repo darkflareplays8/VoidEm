@@ -269,32 +269,29 @@ jobs:
           SUMMARY: ${{ steps.tag_msg.outputs.BODY }}
           WEBHOOK: "https://discord.com/api/webhooks/1477053553385279681/FaCuxuE0WoOr82pwIKyoZTeCTEe9nixg-o9TDs3gSHnF8Zt4fw3p4dJkPNU5b10iRMhM"
         run: |
-          python3 << 'PYEOF'
+          python3 -c "
           import os, json, urllib.request
-          v = os.environ["VERSION"]
-          s = os.environ.get("SUMMARY", "") or "No summary provided."
-          webhook = os.environ["WEBHOOK"]
+          v = os.environ['VERSION']
+          s = os.environ.get('SUMMARY', '') or 'No summary provided.'
+          webhook = os.environ['WEBHOOK']
+          cb = chr(96)*3
           payload = {
-            "embeds": [{
-              "title": "VoidEmulator Update",
-              "color": 9109759,
-              "fields": [
-                {"name": "Version", "value": f"```
-{v}
-```", "inline": False},
-                {"name": "Summary", "value": f"```
-{s}
-```", "inline": False},
-                {"name": "Release Details", "value": f"https://github.com/darkflareplays8/VoidEm/releases/tag/v{v}", "inline": False},
-                {"name": "Source Code", "value": f"https://github.com/darkflareplays8/VoidEm/tree/v{v}", "inline": False},
-                {"name": "Update", "value": "Simply relaunch the emulator!", "inline": False},
-                {"name": "Installer", "value": "<#1476662691631468565>", "inline": False}
+            'embeds': [{
+              'title': 'VoidEmulator Update',
+              'color': 9109759,
+              'fields': [
+                {'name': 'Version', 'value': cb + chr(10) + v + chr(10) + cb, 'inline': False},
+                {'name': 'Summary', 'value': cb + chr(10) + s + chr(10) + cb, 'inline': False},
+                {'name': 'Release Details', 'value': 'https://github.com/darkflareplays8/VoidEm/releases/tag/v' + v, 'inline': False},
+                {'name': 'Source Code', 'value': 'https://github.com/darkflareplays8/VoidEm/tree/v' + v, 'inline': False},
+                {'name': 'Update', 'value': 'Simply relaunch the emulator!', 'inline': False},
+                {'name': 'Installer', 'value': '<#1476662691631468565>', 'inline': False}
               ],
-              "footer": {"text": "VoidHub CI"}
+              'footer': {'text': 'VoidHub CI'}
             }]
           }
           data = json.dumps(payload).encode()
-          req = urllib.request.Request(webhook, data=data, headers={"Content-Type": "application/json"}, method="POST")
+          req = urllib.request.Request(webhook, data=data, headers={'Content-Type': 'application/json'}, method='POST')
           urllib.request.urlopen(req)
-          print("Discord notified!")
-          PYEOF
+          print('Discord notified!')
+          "
