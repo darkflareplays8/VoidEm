@@ -54,7 +54,7 @@ jobs:
           name: VoidEmulator v${{ steps.ver.outputs.VERSION }}
           body: |
             ## VoidEmulator v${{ steps.ver.outputs.VERSION }}
-            **Download VoidInstaller-Setup.exe** to install VoidEmulator on your PC.
+            **Download voidinstaller.exe** to install VoidEmulator on your PC.
             The installer sets everything up automatically.
             Support: https://discord.gg/XUe82svaAr
           files: target/release/voidinstaller.exe

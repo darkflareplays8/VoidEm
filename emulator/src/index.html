@@ -232,9 +232,12 @@ document.getElementById('instance-name-input').addEventListener('keydown', e => 
 async function init() {
   if (!window.__TAURI__) return;
   const setup = await invoke('check_setup');
+  console.log('setup:', JSON.stringify(setup));
   if (!setup.qemu || !setup.image) {
     document.getElementById('main').style.display = 'none';
+    document.querySelector('.header').style.display = 'none';
     document.getElementById('not-ready').style.display = 'flex';
+    document.getElementById('not-ready').innerHTML += '<p style="font-size:10px;color:var(--red);margin-top:8px;">qemu:' + setup.qemu + ' img:' + setup.image + '<br>' + setup.qemu_path + '<br>' + setup.image_path + '</p>';
     return;
   }
   renderInstances();
