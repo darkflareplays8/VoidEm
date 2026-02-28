@@ -267,7 +267,7 @@ jobs:
         env:
           VERSION: ${{ steps.ver.outputs.VERSION }}
           SUMMARY: ${{ steps.tag_msg.outputs.BODY }}
-          WEBHOOK: "https://discord.com/api/webhooks/1477053553385279681/FaCuxuE0WoOr82pwIKyoZTeCTEe9nixg-o9TDs3gSHnF8Zt4fw3p4dJkPNU5b10iRMhM"
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           python3 -c "
           import os, json, urllib.request
