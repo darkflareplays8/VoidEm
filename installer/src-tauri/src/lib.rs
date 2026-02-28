@@ -133,14 +133,33 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
             Ok(r) => r.into_string().unwrap_or_default(),
             Err(e) => { push(&format!("release.json failed: {}", e), -1); return; }
         };
-        let url = serde_json::from_str::<serde_json::Value>(&json)
-            .ok().and_then(|j| j["url"].as_str().map(|s| s.to_string()))
-            .unwrap_or_default();
+        let parsed = serde_json::from_str::<serde_json::Value>(&json).unwrap_or_default();
+        let version = parsed["version"].as_str().unwrap_or("").to_string();
+        let url = parsed["url"].as_str().unwrap_or("").to_string();
         if url.is_empty() { push("No URL in release.json!", -1); return; }
+
+        // Try current URL, if 404 fall back to previous version
+        let final_url = if url_exists(&url) {
+            push(&format!("Downloading VoidEmulator v{}...", version), 90);
+            url.clone()
+        } else {
+            push(&format!("v{} not ready yet, trying previous version...", version), 90);
+            match prev_version_url(&url, &version) {
+                Some(prev) => {
+                    if url_exists(&prev) {
+                        push("Using previous version instead", 90);
+                        prev
+                    } else {
+                        push("Could not find a working VoidEmulator download!", -1); return;
+                    }
+                }
+                None => { push("Could not determine fallback URL!", -1); return; }
+            }
+        };
 
         let exe_tmp = std::env::temp_dir().join("VoidEmulator.exe");
         let exe_dest = install.join("VoidEmulator.exe");
-        if let Err(e) = http_download_progress(&url, &exe_tmp, "VoidEmulator", 90, 96, &state) {
+        if let Err(e) = http_download_progress(&final_url, &exe_tmp, "VoidEmulator", 90, 96, &state) {
             push(&format!("VoidEmulator download failed: {}", e), -1); return;
         }
         if let Err(e) = fs::copy(&exe_tmp, &exe_dest) {
@@ -149,18 +168,28 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         fs::remove_file(&exe_tmp).ok();
         push("VoidEmulator installed ✓", 97);
 
-        // 5. Shortcuts
         push("Creating shortcuts...", 98);
+        let exe_dest = install.join("VoidEmulator.exe");
+        // Start menu
         create_shortcut(
             &exe_dest,
             &PathBuf::from(std::env::var("APPDATA").unwrap_or_default())
                 .join("Microsoft\\Windows\\Start Menu\\Programs\\VoidEmulator.lnk")
         );
-        create_shortcut(
-            &exe_dest,
-            &PathBuf::from(std::env::var("USERPROFILE").unwrap_or_default())
-                .join("Desktop\\VoidEmulator.lnk")
-        );
+        // Desktop - try multiple locations
+        let desktop_paths = vec![
+            PathBuf::from(std::env::var("USERPROFILE").unwrap_or_default()).join("Desktop\\VoidEmulator.lnk"),
+            PathBuf::from(std::env::var("HOMEDRIVE").unwrap_or_default())
+                .join(std::env::var("HOMEPATH").unwrap_or_default())
+                .join("Desktop\\VoidEmulator.lnk"),
+            PathBuf::from("C:\\Users\\Public\\Desktop\\VoidEmulator.lnk"),
+        ];
+        for desktop in &desktop_paths {
+            if desktop.parent().map(|p| p.exists()).unwrap_or(false) {
+                create_shortcut(&exe_dest, desktop);
+                break;
+            }
+        }
 
         push("Installation complete!", 100);
         *state.done.lock().unwrap() = true;
@@ -185,6 +214,33 @@ fn open_discord() -> Result<(), String> {
         .spawn()
         .map(|_| ())
         .map_err(|e| e.to_string())
+}
+
+
+fn url_exists(url: &str) -> bool {
+    match ureq::head(url).call() {
+        Ok(r) => r.status() < 400,
+        Err(_) => false,
+    }
+}
+
+fn prev_version_url(url: &str, version: &str) -> Option<String> {
+    // Parse semver e.g. "2.3.1" -> (2, 3, 1)
+    let parts: Vec<u64> = version.split('.').filter_map(|p| p.parse().ok()).collect();
+    if parts.len() != 3 { return None; }
+    let (major, minor, patch) = (parts[0], parts[1], parts[2]);
+    let prev_ver = if patch > 0 {
+        format!("{}.{}.{}", major, minor, patch - 1)
+    } else if minor > 0 {
+        format!("{}.{}.9", major, minor - 1)
+    } else {
+        return None;
+    };
+    // Replace version string in URL e.g. v2.3.1 -> v2.3.0
+    let prev_url = url
+        .replace(&format!("v{}", version), &format!("v{}", prev_ver))
+        .replace(&format!("/{}/", version), &format!("/{}/", prev_ver));
+    Some(prev_url)
 }
 
 fn http_download_progress(url: &str, dest: &PathBuf, label: &str, pct_start: i32, pct_end: i32, state: &Arc<InstallState>) -> Result<(), String> {

@@ -1,76 +1,20 @@
 use std::process::{Command, Stdio};
 use std::path::PathBuf;
 use std::fs;
-use tauri::{AppHandle, Emitter};
 
-const INSTALL_DIR: &str = "C:\\Program Files\\VoidEmulator";
-const DATA_DIR: &str = "C:\\Program Files\\VoidEmulator\\data";
-const QEMU_DIR: &str = "C:\\Program Files\\VoidEmulator\\data\\qemu";
-const IMAGES_DIR: &str = "C:\\Program Files\\VoidEmulator\\data\\images";
-const INSTANCES_DIR: &str = "C:\\Program Files\\VoidEmulator\\data\\instances";
 const RELEASE_JSON: &str = "https://raw.githubusercontent.com/darkflareplays8/VoidEm/main/release.json";
 const CURRENT_VERSION: &str = "2.0.2";
 
-fn qemu_exe() -> PathBuf { PathBuf::from(QEMU_DIR).join("qemu-system-i386.exe") }
-fn qemu_img() -> PathBuf { PathBuf::from(QEMU_DIR).join("qemu-img.exe") }
-fn adb_exe() -> PathBuf { PathBuf::from(QEMU_DIR).join("adb.exe") }
-fn base_img() -> PathBuf { PathBuf::from(IMAGES_DIR).join("android.img") }
-
-#[tauri::command]
-fn check_update() -> serde_json::Value {
-    let json = ps_fetch(RELEASE_JSON);
-    match serde_json::from_str::<serde_json::Value>(&json) {
-        Ok(j) => {
-            let remote = j["version"].as_str().unwrap_or("0.0.0");
-            serde_json::json!({
-                "has_update": remote != CURRENT_VERSION,
-                "version": remote,
-                "url": j["url"].as_str().unwrap_or("")
-            })
-        }
-        Err(_) => serde_json::json!({ "has_update": false })
-    }
+fn install_dir() -> PathBuf {
+    PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| "C:\\Users\\Public".into())).join("VoidEmulator")
 }
-
-#[tauri::command]
-async fn do_update(app: AppHandle, url: String) -> bool {
-    let app2 = app.clone();
-    std::thread::spawn(move || {
-        let app = app2;
-        app.emit("update-progress", serde_json::json!({ "msg": "Downloading update...", "pct": 10 })).ok();
-        
-        // Download new exe to temp
-        let tmp = PathBuf::from(std::env::temp_dir()).join("VoidEmulator_new.exe");
-        let result = Command::new("powershell")
-            .args(["-Command", &format!(
-                "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '{}' -OutFile '{}'",
-                url, tmp.to_str().unwrap()
-            )])
-            .output();
-        
-        if result.map(|o| o.status.success()).unwrap_or(false) {
-            app.emit("update-progress", serde_json::json!({ "msg": "Installing update...", "pct": 90 })).ok();
-            
-            // Use powershell to replace exe and relaunch (after a short delay so this process can exit)
-            let current = PathBuf::from(INSTALL_DIR).join("VoidEmulator.exe");
-            Command::new("powershell")
-                .args(["-Command", &format!(
-                    "Start-Sleep -Seconds 2; Copy-Item '{}' '{}' -Force; Start-Process '{}'",
-                    tmp.to_str().unwrap(),
-                    current.to_str().unwrap(),
-                    current.to_str().unwrap()
-                )])
-                .spawn().ok();
-            
-            app.emit("update-progress", serde_json::json!({ "msg": "Restarting...", "pct": 100 })).ok();
-            std::thread::sleep(std::time::Duration::from_secs(1));
-            std::process::exit(0);
-        } else {
-            app.emit("update-progress", serde_json::json!({ "msg": "Update failed!", "pct": -1 })).ok();
-        }
-    });
-    true
-}
+fn qemu_dir() -> PathBuf { install_dir().join("data").join("qemu") }
+fn images_dir() -> PathBuf { install_dir().join("data").join("images") }
+fn instances_dir() -> PathBuf { install_dir().join("data").join("instances") }
+fn qemu_exe() -> PathBuf { qemu_dir().join("qemu-system-i386.exe") }
+fn qemu_img() -> PathBuf { qemu_dir().join("qemu-img.exe") }
+fn adb_exe() -> PathBuf { qemu_dir().join("adb.exe") }
+fn base_img() -> PathBuf { images_dir().join("android.img") }
 
 #[tauri::command]
 fn check_setup() -> serde_json::Value {
@@ -82,9 +26,18 @@ fn check_setup() -> serde_json::Value {
 }
 
 #[tauri::command]
+fn open_discord() -> Result<(), String> {
+    Command::new("cmd")
+        .args(["/c", "start", "", "https://discord.gg/XUe82svaAr"])
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn create_overlay(id: String) -> bool {
-    fs::create_dir_all(INSTANCES_DIR).ok();
-    let overlay = PathBuf::from(INSTANCES_DIR).join(format!("{}.qcow2", id));
+    fs::create_dir_all(instances_dir()).ok();
+    let overlay = instances_dir().join(format!("{}.qcow2", id));
     if overlay.exists() { return true; }
     Command::new(qemu_img())
         .args(["create", "-f", "qcow2", "-b", base_img().to_str().unwrap(), "-F", "raw", overlay.to_str().unwrap()])
@@ -93,7 +46,7 @@ fn create_overlay(id: String) -> bool {
 
 #[tauri::command]
 fn start_qemu(id: String, index: u32) -> bool {
-    let overlay = PathBuf::from(INSTANCES_DIR).join(format!("{}.qcow2", id));
+    let overlay = instances_dir().join(format!("{}.qcow2", id));
     let adb_port = 5554 + index * 2;
     Command::new(qemu_exe())
         .args([
@@ -148,22 +101,12 @@ fn base64_encode(data: &[u8]) -> String {
     }).collect()
 }
 
-fn ps_fetch(url: &str) -> String {
-    Command::new("powershell")
-        .args(["-Command", &format!(
-            "$ProgressPreference='SilentlyContinue'; (Invoke-WebRequest -Uri '{}').Content", url
-        )])
-        .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-        .unwrap_or_default()
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
-            check_update, do_update, check_setup,
+            check_setup, open_discord,
             create_overlay, start_qemu, stop_instance, run_adb, capture_screen,
         ])
         .run(tauri::generate_context!())

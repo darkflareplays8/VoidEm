@@ -2,733 +2,245 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VoidEmulator</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=VT323&family=Rajdhani:wght@400;500;600;700&display=swap');
-
+  @import url('https://fonts.googleapis.com/css2?family=VT323&family=Rajdhani:wght@400;600;700&display=swap');
   :root {
-    --void: #07030f;
-    --surface: #0d0a1c;
-    --surface2: #120e22;
-    --border: #2a1a4a;
-    --accent: #8b2fc9;
-    --accent2: #c044ff;
-    --glow: #d580ff;
-    --dim: #4a3a6a;
-    --text: #c8b8e8;
-    --green: #50dc78;
-    --yellow: #ffc832;
-    --red: #ff4444;
+    --void: #07030f; --surface: #0d0a1c; --border: #2a1a4a;
+    --accent: #8b2fc9; --accent2: #c044ff; --glow: #d580ff;
+    --dim: #4a3a6a; --text: #c8b8e8; --green: #50dc78; --red: #ff4444; --yellow: #ffc832;
   }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--void); color:var(--text); font-family:'Rajdhani',sans-serif; height:100vh; overflow:hidden; display:flex; flex-direction:column; }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  /* Header */
+  .header { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid var(--border); background:var(--surface); }
+  .logo { font-family:'VT323',monospace; font-size:28px; color:var(--glow); letter-spacing:4px; text-shadow:0 0 15px var(--accent); }
+  .header-btns { display:flex; gap:8px; }
+  .hbtn { padding:6px 14px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:600; letter-spacing:2px; text-transform:uppercase; cursor:pointer; border-radius:3px; transition:all 0.2s; }
+  .hbtn:hover { border-color:var(--accent); color:var(--glow); }
+  .hbtn.discord { background:#5865F2; border-color:#5865F2; color:white; display:flex; align-items:center; gap:5px; }
+  .hbtn.discord:hover { background:#4752c4; }
+  .hbtn.new-instance { background:linear-gradient(135deg,#3d1270,#6a20b0); border-color:var(--accent2); color:var(--glow); }
 
-  body {
-    background: var(--void);
-    color: var(--text);
-    font-family: 'Rajdhani', sans-serif;
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    user-select: none;
-  }
-
-  /* Titlebar area */
-  #titlebar {
-    height: 40px;
-    background: #09060f;
-    display: flex;
-    align-items: center;
-    padding: 0 16px;
-    border-bottom: 1px solid var(--border);
-    -webkit-app-region: drag;
-    flex-shrink: 0;
-  }
-  #titlebar .logo {
-    font-family: 'VT323', monospace;
-    font-size: 20px;
-    color: var(--glow);
-    letter-spacing: 3px;
-    text-shadow: 0 0 10px var(--accent);
-    -webkit-app-region: no-drag;
-  }
-  #titlebar .sub {
-    font-size: 11px;
-    color: var(--dim);
-    letter-spacing: 4px;
-    margin-left: 12px;
-    text-transform: uppercase;
-  }
-
-  /* Main layout */
-  #app {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  /* Sidebar */
-  #sidebar {
-    width: 240px;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-  }
-
-  .sidebar-section {
-    padding: 12px;
-    border-bottom: 1px solid var(--border);
-  }
-  .sidebar-label {
-    font-size: 10px;
-    color: var(--dim);
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-
-  .btn {
-    width: 100%;
-    padding: 10px 14px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.15s;
-    text-align: left;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-  }
-  .btn:hover { background: #1e1235; border-color: var(--accent); color: var(--glow); }
-  .btn:active { transform: scale(0.98); }
-  .btn.primary { border-color: var(--accent); color: var(--glow); }
-  .btn.primary:hover { background: #2a1050; box-shadow: 0 0 12px rgba(140,48,200,0.3); }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn .icon { font-size: 14px; }
-
-  #instance-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px;
-  }
-  #instance-list::-webkit-scrollbar { width: 4px; }
-  #instance-list::-webkit-scrollbar-track { background: var(--void); }
-  #instance-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  .instance-item {
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    margin-bottom: 6px;
-    cursor: pointer;
-    transition: all 0.15s;
-    background: var(--surface2);
-  }
-  .instance-item:hover { border-color: var(--accent); }
-  .instance-item.active { border-color: var(--accent2); background: #1a0e30; }
-  .instance-item .inst-name {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: 1px;
-  }
-  .instance-item .inst-status {
-    font-size: 11px;
-    margin-top: 3px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-  }
-  .inst-status.stopped { color: var(--dim); }
-  .inst-status.starting { color: var(--yellow); }
-  .inst-status.running { color: var(--green); }
-  .inst-status.error { color: var(--red); }
-
-  #log-box {
-    height: 140px;
-    background: #03020a;
-    border-top: 1px solid var(--border);
-    padding: 8px;
-    overflow-y: auto;
-    font-family: 'Consolas', monospace;
-    font-size: 10px;
-    color: #50c878;
-    flex-shrink: 0;
-  }
-  #log-box::-webkit-scrollbar { width: 3px; }
-  #log-box::-webkit-scrollbar-thumb { background: var(--border); }
+  /* Not ready screen */
+  #not-ready { display:none; flex:1; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
+  #not-ready .title { font-family:'VT323',monospace; font-size:42px; color:var(--red); letter-spacing:4px; }
+  #not-ready p { color:var(--dim); font-size:14px; letter-spacing:2px; }
 
   /* Main content */
-  #content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: var(--void);
-  }
+  #main { display:flex; flex:1; overflow:hidden; }
 
-  /* Setup screen */
-  #setup-screen {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 24px;
-    padding: 40px;
-  }
-  #setup-screen .big-title {
-    font-family: 'VT323', monospace;
-    font-size: 64px;
-    color: var(--glow);
-    text-shadow: 0 0 30px var(--accent), 0 0 60px rgba(140,48,200,0.3);
-    letter-spacing: 8px;
-    text-align: center;
-  }
-  #setup-screen .desc {
-    font-size: 14px;
-    color: var(--dim);
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    text-align: center;
-  }
-  #setup-btn {
-    padding: 14px 40px;
-    background: linear-gradient(135deg, #3d1270, #6a20b0);
-    border: 1px solid var(--accent2);
-    color: var(--glow);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s;
-    box-shadow: 0 0 20px rgba(140,48,200,0.3);
-    width: 300px;
-  }
-  #setup-btn:hover { box-shadow: 0 0 30px rgba(192,68,255,0.5); transform: translateY(-1px); }
-  #setup-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  /* Sidebar */
+  .sidebar { width:220px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:12px; gap:8px; overflow-y:auto; }
+  .sidebar-title { font-size:10px; color:var(--dim); letter-spacing:3px; text-transform:uppercase; padding:4px 0; }
+  .instance-card { padding:10px 12px; border:1px solid var(--border); border-radius:4px; cursor:pointer; transition:all 0.2s; }
+  .instance-card:hover, .instance-card.active { border-color:var(--accent); background:rgba(139,47,201,0.1); }
+  .instance-name { font-size:13px; font-weight:600; color:var(--text); }
+  .instance-status { font-size:10px; color:var(--dim); letter-spacing:1px; margin-top:2px; }
+  .instance-status.running { color:var(--green); }
 
-  #progress-wrap {
-    width: 300px;
-    display: none;
-  }
-  #progress-bar-bg {
-    height: 6px;
-    background: var(--surface2);
-    border-radius: 3px;
-    overflow: hidden;
-    border: 1px solid var(--border);
-  }
-  #progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    width: 0%;
-    transition: width 0.3s;
-    box-shadow: 0 0 8px var(--accent);
-  }
-  #progress-msg {
-    font-size: 11px;
-    color: var(--dim);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-top: 8px;
-    text-align: center;
-  }
+  /* Viewer */
+  .viewer { flex:1; display:flex; align-items:center; justify-content:center; background:#020109; position:relative; }
+  .viewer-placeholder { text-align:center; color:var(--dim); }
+  .viewer-placeholder .big { font-family:'VT323',monospace; font-size:48px; color:var(--border); letter-spacing:4px; }
+  #screen { max-width:100%; max-height:100%; object-fit:contain; display:none; }
 
-  /* Instance grid */
-  #instance-grid {
-    display: none;
-    flex: 1;
-    padding: 10px;
-    gap: 10px;
-    overflow: hidden;
-  }
-  #instance-grid.show { display: flex; }
-  #instance-grid.count-1 .inst-panel { flex: 1; }
-  #instance-grid.count-2 .inst-panel { flex: 1; }
-  #instance-grid.count-3 { flex-wrap: wrap; }
-  #instance-grid.count-3 .inst-panel { flex: 1 1 calc(50% - 10px); min-width: 300px; }
+  /* Instance controls */
+  .controls { width:180px; background:var(--surface); border-left:1px solid var(--border); padding:12px; display:flex; flex-direction:column; gap:8px; }
+  .ctrl-title { font-size:10px; color:var(--dim); letter-spacing:3px; text-transform:uppercase; }
+  .ctrl-btn { padding:8px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; cursor:pointer; border-radius:3px; transition:all 0.2s; width:100%; }
+  .ctrl-btn:hover { border-color:var(--accent); color:var(--glow); }
+  .ctrl-btn.start { border-color:var(--green); color:var(--green); }
+  .ctrl-btn.stop { border-color:var(--red); color:var(--red); }
 
-  .inst-panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    min-height: 200px;
-  }
-  .inst-panel.active-panel { border-color: var(--accent); }
-
-  .panel-header {
-    height: 36px;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 10px;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-  .panel-name {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--glow);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    flex: 1;
-  }
-  .panel-status {
-    font-size: 10px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-  }
-  .panel-btn {
-    width: 28px;
-    height: 26px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text);
-    cursor: pointer;
-    border-radius: 3px;
-    font-size: 12px;
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .panel-btn:hover { border-color: var(--accent); color: var(--glow); }
-
-  .panel-screen {
-    flex: 1;
-    background: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    position: relative;
-    cursor: crosshair;
-  }
-  .panel-screen img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    display: block;
-  }
-  .panel-screen .no-signal {
-    color: var(--dim);
-    font-size: 12px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    text-align: center;
-    line-height: 2;
-  }
-
-  .panel-controls {
-    height: 36px;
-    background: var(--surface2);
-    border-top: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 8px;
-    gap: 4px;
-    flex-shrink: 0;
-  }
-  .ctrl-btn {
-    padding: 4px 10px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--dim);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    cursor: pointer;
-    border-radius: 3px;
-    transition: all 0.15s;
-    text-transform: uppercase;
-  }
-  .ctrl-btn:hover { border-color: var(--accent); color: var(--text); }
-
-  /* Empty state */
-  #empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    color: var(--dim);
-  }
-  #empty-state .empty-icon { font-size: 48px; opacity: 0.3; }
-  #empty-state .empty-text {
-    font-size: 12px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    text-align: center;
-    line-height: 2;
-  }
-
-  /* Noise overlay */
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 9999;
-    opacity: 0.4;
-  }
-  #discord-btn { position:fixed; bottom:16px; right:16px; padding:8px 16px; background:#5865F2; border:none; color:white; font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase; cursor:pointer; border-radius:4px; display:flex; align-items:center; gap:6px; z-index:1000; transition:all 0.2s; }
+  /* Discord fixed btn */
+  #discord-btn { position:fixed; bottom:16px; right:16px; padding:8px 14px; background:#5865F2; border:none; color:white; font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase; cursor:pointer; border-radius:4px; display:flex; align-items:center; gap:6px; z-index:100; transition:all 0.2s; }
   #discord-btn:hover { background:#4752c4; transform:translateY(-1px); }
+
+  /* Modal */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center; }
+  .modal-overlay.show { display:flex; }
+  .modal { background:var(--surface); border:1px solid var(--border); padding:24px; border-radius:6px; min-width:300px; }
+  .modal h3 { font-family:'VT323',monospace; font-size:24px; color:var(--glow); letter-spacing:3px; margin-bottom:12px; }
+  .modal input { width:100%; padding:8px 12px; background:var(--void); border:1px solid var(--border); color:var(--text); font-family:'Rajdhani',sans-serif; font-size:14px; border-radius:3px; margin-bottom:12px; }
+  .modal-btns { display:flex; gap:8px; justify-content:flex-end; }
+  .mbtn { padding:8px 20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:600; letter-spacing:2px; cursor:pointer; border-radius:3px; }
+  .mbtn.confirm { background:linear-gradient(135deg,#3d1270,#6a20b0); border-color:var(--accent2); color:var(--glow); }
 </style>
 </head>
 <body>
 
-
-  <!-- Update overlay -->
-  <div id="update-overlay" style="display:none;position:fixed;inset:0;background:rgba(7,3,15,0.95);z-index:10000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
-    <div style="font-family:'VT323',monospace;font-size:40px;color:#d580ff;letter-spacing:6px;text-shadow:0 0 20px #8b2fc9;">UPDATING</div>
-    <div id="update-msg" style="font-size:12px;color:#4a3a6a;letter-spacing:3px;text-transform:uppercase;">Checking for updates...</div>
-    <div style="width:300px;height:4px;background:#0d0a1c;border:1px solid #2a1a4a;border-radius:2px;overflow:hidden;">
-      <div id="update-bar" style="height:100%;background:linear-gradient(90deg,#8b2fc9,#c044ff);width:0%;transition:width 0.3s;box-shadow:0 0 8px #8b2fc9;"></div>
-    </div>
+<div class="header">
+  <div class="logo">VOIDEMULATOR</div>
+  <div class="header-btns">
+    <button class="hbtn new-instance" onclick="showNewInstance()">+ New Instance</button>
+    <button class="hbtn discord" onclick="openDiscord()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.033.056a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+      Discord
+    </button>
   </div>
-
-<div id="titlebar">
-  <span class="logo">VOIDEMULATOR</span>
-  <span class="sub">// Multi-Instance Android</span>
 </div>
 
-<div id="app">
-  <!-- Sidebar -->
-  <div id="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-label">Instances</div>
-      <button class="btn primary" id="add-btn" disabled>
-        <span class="icon">＋</span> New Instance
-      </button>
-    </div>
+<div id="not-ready">
+  <div class="title">NOT READY</div>
+  <p>Please run VoidInstaller first to set up the emulator.</p>
+</div>
+
+<div id="main">
+  <div class="sidebar">
+    <div class="sidebar-title">Instances</div>
     <div id="instance-list"></div>
-    <div id="log-box"></div>
   </div>
-
-  <!-- Content -->
-  <div id="content">
-
-    <!-- Setup screen -->
-    <div id="setup-screen">
-      <div class="big-title">VOIDEMULATOR</div>
-      <div class="desc">Multi-Instance Android Emulator</div>
-      <button id="setup-btn">Initialize System</button>
-      <div id="progress-wrap">
-        <div id="progress-bar-bg"><div id="progress-bar"></div></div>
-        <div id="progress-msg">Preparing...</div>
-      </div>
+  <div class="viewer">
+    <div class="viewer-placeholder" id="placeholder">
+      <div class="big">VOID</div>
+      <div style="font-size:12px;letter-spacing:3px;margin-top:8px;">Select an instance to start</div>
     </div>
+    <img id="screen" alt="Android Screen" />
+  </div>
+  <div class="controls">
+    <div class="ctrl-title">Controls</div>
+    <button class="ctrl-btn start" onclick="startSelected()">▶ Start</button>
+    <button class="ctrl-btn stop" onclick="stopSelected()">■ Stop</button>
+    <button class="ctrl-btn" onclick="captureScreen()">📷 Capture</button>
+    <button class="ctrl-btn" onclick="deleteSelected()" style="border-color:var(--red);color:var(--red);margin-top:auto;">✕ Delete</button>
+  </div>
+</div>
 
-    <!-- Empty state (after setup) -->
-    <div id="empty-state" style="display:none">
-      <div class="empty-icon">📱</div>
-      <div class="empty-text">No instances running<br>Click "New Instance" to begin</div>
+<!-- New Instance Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3>NEW INSTANCE</h3>
+    <input type="text" id="instance-name-input" placeholder="Instance name..." maxlength="30" />
+    <div class="modal-btns">
+      <button class="mbtn" onclick="closeModal()">Cancel</button>
+      <button class="mbtn confirm" onclick="createInstance()">Create</button>
     </div>
-
-    <!-- Instance grid -->
-    <div id="instance-grid"></div>
-
   </div>
 </div>
 
 <script>
-const MAX = 3;
-let instances = [];
-let setupDone = false;
+const invoke = window.__TAURI__.core.invoke;
 
-// Will be set up after Tauri module loads
-window._tauriReady = false;
+let instances = JSON.parse(localStorage.getItem('void_instances') || '[]');
+let selectedId = null;
+let screenInterval = null;
 
-// ── LOG ──────────────────────────────────────────────────────────────
-const logBox = document.getElementById('log-box');
-function log(msg) {
-  const t = new Date().toLocaleTimeString('en-GB', { hour12: false });
-  logBox.innerHTML += `<div>[${t}] ${msg}</div>`;
-  logBox.scrollTop = logBox.scrollHeight;
+function saveInstances() {
+  localStorage.setItem('void_instances', JSON.stringify(instances));
 }
 
-// ── SETUP ────────────────────────────────────────────────────────────
-
-
-// Button click handler
-document.getElementById('setup-btn').addEventListener('click', async () => {
-  document.getElementById('setup-btn').disabled = true;
-  document.getElementById('setup-btn').textContent = 'INITIALIZING...';
-  log('Starting setup...');
-  await window.dm.runSetup();
-});
-
-function renderSteps(msg) {
-  const stepsEl = document.getElementById('setup-steps');
-  if (!stepsEl) return;
-
-  // Parse percentages from message like "QEMU: 45% | ADB: 100% | Android: 12%"
-  const parse = (label) => {
-    const match = msg.match(new RegExp(label + ':\s*(\d+)%'));
-    return match ? parseInt(match[1]) : null;
-  };
-
-  const items = [
-    { label: 'QEMU Emulator', key: 'QEMU' },
-    { label: 'ADB Tools', key: 'ADB' },
-    { label: 'Android-x86', key: 'Android' },
-  ];
-
-  stepsEl.innerHTML = items.map(item => {
-    const pct = parse(item.key);
-    const done = pct === 100 || pct === null && msg.includes('already');
-    const active = pct !== null && pct < 100;
-    const color = done ? 'var(--green)' : active ? 'var(--yellow)' : 'var(--dim)';
-    const icon = done ? '✓' : active ? '◎' : '○';
-    const extra = active ? ` ${pct}%` : '';
-    return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:${color}">
-      <span>${icon}</span><span>${item.label}${extra}</span>
-    </div>`;
-  }).join('');
-}
-
-// Register listener FIRST before anything else
-window.dm.onSetupProgress(({ msg, pct }) => {
-  console.log('Progress:', pct, msg);
-  const bar = document.getElementById('progress-bar');
-  const msgEl = document.getElementById('progress-msg');
-  const statusEl = document.getElementById('setup-status');
-  const wrap = document.getElementById('progress-wrap');
-  if (wrap) wrap.style.display = 'block';
-  if (bar) bar.style.width = Math.max(0, pct) + '%';
-  if (msgEl) msgEl.textContent = msg;
-  if (statusEl) statusEl.textContent = msg;
-  renderSteps(msg);
-  log(msg);
-  if (pct >= 100) {
-    setTimeout(() => {
-      document.getElementById('setup-screen').style.display = 'none';
-      document.getElementById('empty-state').style.display = 'flex';
-      document.getElementById('add-btn').disabled = false;
-      setupDone = true;
-      log('System ready ✓');
-    }, 1000);
-  }
-});
-
-// Auto-run setup on load
-window.addEventListener('DOMContentLoaded', async () => {
-  const status = await window.dm.checkSetup();
-  log(`QEMU: ${status.qemu ? '✓' : '✗'} | ADB: ${status.adb ? '✓' : '✗'} | Image: ${status.image ? '✓' : '✗'}`);
-
-  if (status.qemu && status.adb && status.image) {
-    // Already set up — skip straight to app
-    document.getElementById('setup-screen').style.display = 'none';
-    document.getElementById('empty-state').style.display = 'flex';
-    document.getElementById('add-btn').disabled = false;
-    setupDone = true;
-    log('All dependencies found. Ready!');
-  } else {
-    // Auto-start setup immediately
-    document.getElementById('setup-status').textContent = 'Starting automatic setup...';
-    document.getElementById('setup-btn').disabled = true;
-    document.getElementById('setup-btn').textContent = 'INITIALIZING...';
-    log('Starting automatic setup...');
-    await window.dm.runSetup();
-  }
-});
-
-// ── INSTANCES ────────────────────────────────────────────────────────
-document.getElementById('add-btn').addEventListener('click', async () => {
-  if (instances.length >= MAX) return;
-  const id = Math.random().toString(36).slice(2, 10);
-  const index = instances.length;
-  const name = `Device ${index + 1}`;
-  await window.dm.createInstance({ id, name, index });
-  instances.push({ id, name, index, state: 'stopped' });
-  renderSidebar();
-  renderGrid();
-  if (instances.length >= MAX) document.getElementById('add-btn').disabled = true;
-  log(`Created ${name}`);
-});
-
-window.dm.onInstanceState(({ id, state }) => {
-  const inst = instances.find(i => i.id === id);
-  if (inst) inst.state = state;
-  renderSidebar();
-  updatePanelStatus(id, state);
-});
-
-window.dm.onScreenUpdate(({ id, data }) => {
-  const img = document.getElementById(`screen-img-${id}`);
-  if (img) img.src = 'data:image/png;base64,' + data;
-});
-
-window.dm.onInstanceLog(({ id, msg }) => log(`[${id.slice(0,4)}] ${msg.trim()}`));
-
-function renderSidebar() {
+function renderInstances() {
   const list = document.getElementById('instance-list');
-  list.innerHTML = instances.map(inst => `
-    <div class="instance-item" data-id="${inst.id}">
-      <div class="inst-name">${inst.name}</div>
-      <div class="inst-status ${inst.state}">● ${inst.state.toUpperCase()}</div>
+  if (instances.length === 0) {
+    list.innerHTML = '<div style="color:var(--dim);font-size:11px;letter-spacing:1px;">No instances yet</div>';
+    return;
+  }
+  list.innerHTML = instances.map((inst, i) => `
+    <div class="instance-card ${inst.id === selectedId ? 'active' : ''}" onclick="selectInstance('${inst.id}')">
+      <div class="instance-name">${inst.name}</div>
+      <div class="instance-status ${inst.running ? 'running' : ''}">${inst.running ? '● RUNNING' : '○ STOPPED'}</div>
     </div>
   `).join('');
 }
 
-function renderGrid() {
-  const grid = document.getElementById('instance-grid');
-  const empty = document.getElementById('empty-state');
+function selectInstance(id) {
+  selectedId = id;
+  renderInstances();
+}
 
-  if (instances.length === 0) {
-    grid.classList.remove('show');
-    empty.style.display = 'flex';
-    return;
+function showNewInstance() {
+  document.getElementById('modal').classList.add('show');
+  document.getElementById('instance-name-input').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+  document.getElementById('instance-name-input').value = '';
+}
+
+async function createInstance() {
+  const name = document.getElementById('instance-name-input').value.trim();
+  if (!name) return;
+  const id = 'inst_' + Date.now();
+  const ok = await invoke('create_overlay', { id });
+  if (ok) {
+    instances.push({ id, name, running: false, index: instances.length });
+    saveInstances();
+    renderInstances();
+    selectInstance(id);
   }
-
-  empty.style.display = 'none';
-  grid.className = `show count-${instances.length}`;
-  grid.innerHTML = instances.map(inst => createPanelHTML(inst)).join('');
-
-  // Bind events for each panel
-  instances.forEach(inst => bindPanelEvents(inst));
+  closeModal();
 }
 
-function createPanelHTML(inst) {
-  return `
-    <div class="inst-panel" id="panel-${inst.id}">
-      <div class="panel-header">
-        <span class="panel-name">${inst.name}</span>
-        <span class="panel-status stopped" id="status-${inst.id}">● STOPPED</span>
-        <button class="panel-btn" id="start-${inst.id}" title="Start">▶</button>
-        <button class="panel-btn" id="stop-${inst.id}" title="Stop">■</button>
-      </div>
-      <div class="panel-screen" id="screen-${inst.id}">
-        <div class="no-signal" id="nosig-${inst.id}">Click ▶ to start<br><span style="font-size:10px;opacity:0.5">DEVICE ${inst.index + 1}</span></div>
-        <img id="screen-img-${inst.id}" style="display:none" />
-      </div>
-      <div class="panel-controls">
-        <button class="ctrl-btn" onclick="adbKey('${inst.id}','KEYCODE_HOME')">⌂ Home</button>
-        <button class="ctrl-btn" onclick="adbKey('${inst.id}','KEYCODE_BACK')">← Back</button>
-        <button class="ctrl-btn" onclick="adbKey('${inst.id}','KEYCODE_APP_SWITCH')">▣ Apps</button>
-        <button class="ctrl-btn" onclick="adbKey('${inst.id}','KEYCODE_VOLUME_UP')">Vol+</button>
-        <button class="ctrl-btn" onclick="adbKey('${inst.id}','KEYCODE_VOLUME_DOWN')">Vol-</button>
-      </div>
-    </div>
-  `;
+async function startSelected() {
+  if (!selectedId) return;
+  const inst = instances.find(i => i.id === selectedId);
+  if (!inst) return;
+  await invoke('start_qemu', { id: inst.id, index: inst.index });
+  inst.running = true;
+  saveInstances();
+  renderInstances();
+  // Start screen capture
+  document.getElementById('placeholder').style.display = 'none';
+  document.getElementById('screen').style.display = 'block';
+  screenInterval = setInterval(() => captureScreen(), 2000);
 }
 
-function bindPanelEvents(inst) {
-  document.getElementById(`start-${inst.id}`).onclick = async () => {
-    log(`Starting ${inst.name}...`);
-    await window.dm.startInstance(inst.id);
-  };
-  document.getElementById(`stop-${inst.id}`).onclick = async () => {
-    await window.dm.stopInstance(inst.id);
-    const img = document.getElementById(`screen-img-${inst.id}`);
-    if (img) { img.style.display = 'none'; img.src = ''; }
-    document.getElementById(`nosig-${inst.id}`).style.display = 'flex';
-    log(`Stopped ${inst.name}`);
-  };
-
-  // Touch/click on screen → ADB tap
-  const screen = document.getElementById(`screen-${inst.id}`);
-  let dragStart = null;
-
-  screen.addEventListener('mousedown', (e) => {
-    dragStart = { x: e.clientX, y: e.clientY };
-  });
-
-  screen.addEventListener('mouseup', async (e) => {
-    if (!dragStart) return;
-    const img = document.getElementById(`screen-img-${inst.id}`);
-    if (!img || img.style.display === 'none') return;
-
-    const rect = img.getBoundingClientRect();
-    const scaleX = 1080 / rect.width;
-    const scaleY = 1920 / rect.height;
-    const dx = Math.abs(e.clientX - dragStart.x);
-    const dy = Math.abs(e.clientY - dragStart.y);
-    const x = Math.round((e.clientX - rect.left) * scaleX);
-    const y = Math.round((e.clientY - rect.top) * scaleY);
-
-    if (dx < 5 && dy < 5) {
-      await window.dm.adbTap(inst.id, x, y);
-    } else {
-      const x1 = Math.round((dragStart.x - rect.left) * scaleX);
-      const y1 = Math.round((dragStart.y - rect.top) * scaleY);
-      await window.dm.adbSwipe(inst.id, x1, y1, x, y);
-    }
-    dragStart = null;
-  });
+async function stopSelected() {
+  if (!selectedId) return;
+  const inst = instances.find(i => i.id === selectedId);
+  if (!inst) return;
+  await invoke('stop_instance', { id: inst.id });
+  inst.running = false;
+  saveInstances();
+  renderInstances();
+  clearInterval(screenInterval);
+  document.getElementById('screen').style.display = 'none';
+  document.getElementById('placeholder').style.display = 'block';
 }
 
-function updatePanelStatus(id, state) {
-  const el = document.getElementById(`status-${id}`);
-  if (!el) return;
-  const colors = { stopped: '#4a3a6a', starting: '#ffc832', running: '#50dc78', error: '#ff4444' };
-  el.textContent = `● ${state.toUpperCase()}`;
-  el.style.color = colors[state] || '#4a3a6a';
-
-  if (state === 'running') {
-    document.getElementById(`nosig-${id}`).style.display = 'none';
-    document.getElementById(`screen-img-${id}`).style.display = 'block';
-  }
+async function captureScreen() {
+  if (!selectedId) return;
+  const inst = instances.find(i => i.id === selectedId);
+  if (!inst || !inst.running) return;
+  const adb_port = 5554 + inst.index * 2;
+  const data = await invoke('capture_screen', { id: inst.id, adb_port });
+  if (data) document.getElementById('screen').src = 'data:image/png;base64,' + data;
 }
 
-async function adbKey(id, key) {
-  await window.dm.adbKey(id, key);
+async function deleteSelected() {
+  if (!selectedId) return;
+  instances = instances.filter(i => i.id !== selectedId);
+  selectedId = null;
+  saveInstances();
+  renderInstances();
 }
-</script>
 
-<script type="module">
-const { invoke } = window.__TAURI__.core;
-const { listen } = window.__TAURI__.event;
+async function openDiscord() {
+  await invoke('open_discord');
+}
 
-// Check for update on launch
-const overlay = document.getElementById('update-overlay');
-const updateMsg = document.getElementById('update-msg');
-const updateBar = document.getElementById('update-bar');
-
-await listen('update-progress', e => {
-  const { msg, pct } = e.payload;
-  updateMsg.textContent = msg;
-  if (pct >= 0) updateBar.style.width = pct + '%';
+// Enter key in modal
+document.getElementById('instance-name-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') createInstance();
+  if (e.key === 'Escape') closeModal();
 });
 
-try {
-  const result = await invoke('check_update');
-  if (result.has_update) {
-    overlay.style.display = 'flex';
-    updateMsg.textContent = `Update available: v${result.version}`;
-    updateBar.style.width = '5%';
-    await invoke('do_update', { url: result.url });
+// Init
+async function init() {
+  if (!window.__TAURI__) return;
+  const setup = await invoke('check_setup');
+  if (!setup.qemu || !setup.image) {
+    document.getElementById('main').style.display = 'none';
+    document.getElementById('not-ready').style.display = 'flex';
+    return;
   }
-} catch(e) {
-  // No internet or update check failed — just continue
+  renderInstances();
 }
-</script>
 
-<button id="discord-btn" onclick="window.__TAURI__.shell.open('https://discord.gg/XUe82svaAr')">
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.033.056a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
-  Discord
-</button>
+init();
+</script>
 </body>
 </html>

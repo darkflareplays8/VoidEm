@@ -142,10 +142,23 @@ async function init() {
 }
 
 window.launchApp = async function() {
+  const btn = document.getElementById('launch-btn');
+  btn.disabled = true;
+  btn.textContent = 'Opening VoidEmulator...';
+  btn.style.opacity = '0.7';
   try {
     await window.__TAURI__.core.invoke('launch_app');
+    log('VoidEmulator launched!', 'ok');
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = 'Launch VoidEmulator &#9658;';
+      btn.style.opacity = '1';
+    }, 3000);
   } catch(e) {
     log('Launch error: ' + e, 'error');
+    btn.disabled = false;
+    btn.innerHTML = 'Launch VoidEmulator &#9658;';
+    btn.style.opacity = '1';
   }
 };
 
