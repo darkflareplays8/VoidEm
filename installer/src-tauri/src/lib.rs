@@ -49,7 +49,7 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         let images = images_dir();
         let instances = install.join("data").join("instances");
 
-        for dir in &[&install, &qemu, &images, &instances] {
+        for dir in &[&install, &images, &instances] {
             if let Err(e) = fs::create_dir_all(dir) {
                 push(&format!("Failed to create dir {:?}: {}", dir, e), -1); return;
             }

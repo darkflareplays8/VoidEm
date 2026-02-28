@@ -39,11 +39,6 @@ jobs:
             if ($attempts -lt 3) { Write-Host "Retrying in 10s..."; Start-Sleep 10 }
           } while ($attempts -lt 3)
           exit $LASTEXITCODE
-      - name: Confirm build output
-        shell: pwsh
-        run: |
-          $files = Get-ChildItem -Recurse -Filter "*.exe" | Select-Object FullName, Length
-          $files | ForEach-Object { Write-Host "Found: $($_.FullName) ($([math]::Round($_.Length/1MB, 2)) MB)" }
       - name: Get version
         id: ver
         shell: bash
@@ -97,11 +92,6 @@ jobs:
             if ($attempts -lt 3) { Write-Host "Retrying in 10s..."; Start-Sleep 10 }
           } while ($attempts -lt 3)
           exit $LASTEXITCODE
-      - name: Confirm build output
-        shell: pwsh
-        run: |
-          $files = Get-ChildItem -Recurse -Filter "*.exe" | Select-Object FullName, Length
-          $files | ForEach-Object { Write-Host "Found: $($_.FullName) ($([math]::Round($_.Length/1MB, 2)) MB)" }
       - name: Get version
         id: ver
         shell: bash
@@ -112,3 +102,30 @@ jobs:
           files: target/release/voidemulator.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    needs: [build-installer, build-emulator]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get version
+        id: ver
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      - name: Send Discord embed
+        run: |
+          VERSION="${{ steps.ver.outputs.VERSION }}"
+          curl -s -X POST "https://discord.com/api/webhooks/1477053553385279681/FaCuxuE0WoOr82pwIKyoZTeCTEe9nixg-o9TDs3gSHnF8Zt4fw3p4dJkPNU5b10iRMhM" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"VoidEmulator v${VERSION} Released\",
+                \"color\": 9109759,
+                \"fields\": [
+                  { \"name\": \"Version\", \"value\": \"\`\`\`\\n${VERSION}\\n\`\`\`\", \"inline\": false },
+                  { \"name\": \"Release Details\", \"value\": \"https://github.com/darkflareplays8/VoidEm/releases/tag/v${VERSION}\", \"inline\": false },
+                  { \"name\": \"Source Code\", \"value\": \"https://github.com/darkflareplays8/VoidEm/tree/v${VERSION}\", \"inline\": false },
+                  { \"name\": \"Update\", \"value\": \"Simply relaunch the emulator!\", \"inline\": false },
+                  { \"name\": \"Installer\", \"value\": \"<#1476662691631468565>\", \"inline\": false }
+                ],
+                \"footer\": { \"text\": \"VoidHub CI\" }
+              }]
+            }"
