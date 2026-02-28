@@ -7,11 +7,14 @@ use tauri::State;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 
-const INSTALL_DIR: &str = "C:\\Program Files\\VoidEmulator";
-const QEMU_DIR: &str = "C:\\Program Files\\VoidEmulator\\data\\qemu";
-const IMAGES_DIR: &str = "C:\\Program Files\\VoidEmulator\\data\\images";
 const RELEASE_JSON: &str = "https://raw.githubusercontent.com/darkflareplays8/VoidEm/main/release.json";
 const QEMU_URL: &str = "https://qemu.weilnetz.de/w64/2025/qemu-w64-setup-20251224.exe";
+
+fn install_dir() -> PathBuf {
+    PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| "C:\\Users\\Public".into())).join("VoidEmulator")
+}
+fn qemu_dir() -> PathBuf { install_dir().join("data").join("qemu") }
+fn images_dir() -> PathBuf { install_dir().join("data").join("images") }
 
 #[derive(Default)]
 pub struct InstallState {
@@ -21,9 +24,9 @@ pub struct InstallState {
 
 #[tauri::command]
 fn check_installed() -> bool {
-    PathBuf::from(INSTALL_DIR).join("VoidEmulator.exe").exists()
-        && PathBuf::from(QEMU_DIR).join("qemu-system-i386.exe").exists()
-        && PathBuf::from(IMAGES_DIR).join("android.img").exists()
+    install_dir().join("VoidEmulator.exe").exists()
+        && qemu_dir().join("qemu-system-i386.exe").exists()
+        && images_dir().join("android.img").exists()
 }
 
 #[tauri::command]
@@ -41,13 +44,20 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
             state.log.lock().unwrap().push((msg.to_string(), pct));
         };
 
-        for dir in &[INSTALL_DIR, &format!("{}\\data", INSTALL_DIR), QEMU_DIR, IMAGES_DIR, &format!("{}\\data\\instances", INSTALL_DIR)] {
-            fs::create_dir_all(dir).ok();
+        let install = install_dir();
+        let qemu = qemu_dir();
+        let images = images_dir();
+        let instances = install.join("data").join("instances");
+
+        for dir in &[&install, &qemu, &images, &instances] {
+            if let Err(e) = fs::create_dir_all(dir) {
+                push(&format!("Failed to create dir {:?}: {}", dir, e), -1); return;
+            }
         }
         push("Starting installation...", 1);
 
         // 1. QEMU
-        let qemu_exe = PathBuf::from(QEMU_DIR).join("qemu-system-i386.exe");
+        let qemu_exe = qemu.join("qemu-system-i386.exe");
         let qemu_default = PathBuf::from("C:\\Program Files\\qemu\\qemu-system-i386.exe");
         if !qemu_exe.exists() && !qemu_default.exists() {
             let installer = std::env::temp_dir().join("qemu-setup.exe");
@@ -56,33 +66,33 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
             }
             push("Installing QEMU...", 21);
             Command::new(&installer)
-                .args(["/S", &format!("/D={}", QEMU_DIR)])
+                .args(["/S", &format!("/D={}", qemu.to_str().unwrap())])
                 .creation_flags(0x08000000)
                 .status().ok();
             fs::remove_file(&installer).ok();
-            // Copy from default install location to our dir
-            let default_dir = PathBuf::from("C:\\Program Files\\qemu");
-            if default_dir.exists() {
-                if let Ok(entries) = fs::read_dir(&default_dir) {
-                    for e in entries.flatten() {
-                        fs::copy(e.path(), PathBuf::from(QEMU_DIR).join(e.file_name())).ok();
+            // Copy from default location if needed
+            if !qemu_exe.exists() {
+                let default_dir = PathBuf::from("C:\\Program Files\\qemu");
+                if default_dir.exists() {
+                    if let Ok(entries) = fs::read_dir(&default_dir) {
+                        for e in entries.flatten() {
+                            fs::copy(e.path(), qemu.join(e.file_name())).ok();
+                        }
                     }
                 }
             }
         } else if qemu_default.exists() && !qemu_exe.exists() {
-            // Already installed in default location, just copy to our dir
-            push("Copying QEMU to VoidEmulator dir...", 20);
-            let default_dir = PathBuf::from("C:\\Program Files\\qemu");
-            if let Ok(entries) = fs::read_dir(&default_dir) {
+            push("Copying QEMU files...", 20);
+            if let Ok(entries) = fs::read_dir("C:\\Program Files\\qemu") {
                 for e in entries.flatten() {
-                    fs::copy(e.path(), PathBuf::from(QEMU_DIR).join(e.file_name())).ok();
+                    fs::copy(e.path(), qemu.join(e.file_name())).ok();
                 }
             }
         }
         push("QEMU ready ✓", 25);
 
         // 2. ADB
-        let adb_exe = PathBuf::from(QEMU_DIR).join("adb.exe");
+        let adb_exe = qemu.join("adb.exe");
         if !adb_exe.exists() {
             let zip = std::env::temp_dir().join("adb.zip");
             if let Err(e) = http_download_progress("https://dl.google.com/android/repository/platform-tools-latest-windows.zip", &zip, "ADB", 27, 44, &state) {
@@ -94,7 +104,7 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
             let pt = tmp.join("platform-tools");
             for f in &["adb.exe", "AdbWinApi.dll", "AdbWinUsbApi.dll"] {
                 let src = pt.join(f);
-                if src.exists() { fs::copy(&src, PathBuf::from(QEMU_DIR).join(f)).ok(); }
+                if src.exists() { fs::copy(&src, qemu.join(f)).ok(); }
             }
             fs::remove_dir_all(&tmp).ok();
             fs::remove_file(&zip).ok();
@@ -102,14 +112,14 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         push("ADB ready ✓", 47);
 
         // 3. Android image
-        let base_img = PathBuf::from(IMAGES_DIR).join("android.img");
+        let base_img = images.join("android.img");
         if !base_img.exists() {
             let iso = std::env::temp_dir().join("android.iso");
             if let Err(e) = http_download_progress("https://www.fosshub.com/Android-x86.html/android-x86-4.4-r5.iso", &iso, "Android", 49, 86, &state) {
                 push(&format!("Android download failed: {}", e), -1); return;
             }
             push("Creating disk image...", 87);
-            Command::new(PathBuf::from(QEMU_DIR).join("qemu-img.exe"))
+            Command::new(qemu.join("qemu-img.exe"))
                 .args(["create", "-f", "raw", base_img.to_str().unwrap(), "4G"])
                 .creation_flags(0x08000000)
                 .output().ok();
@@ -129,23 +139,28 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         if url.is_empty() { push("No URL in release.json!", -1); return; }
 
         let exe_tmp = std::env::temp_dir().join("VoidEmulator.exe");
-        let exe_dest = PathBuf::from(INSTALL_DIR).join("VoidEmulator.exe");
+        let exe_dest = install.join("VoidEmulator.exe");
         if let Err(e) = http_download_progress(&url, &exe_tmp, "VoidEmulator", 90, 96, &state) {
             push(&format!("VoidEmulator download failed: {}", e), -1); return;
         }
-        fs::copy(&exe_tmp, &exe_dest).map_err(|e| e.to_string()).ok();
+        if let Err(e) = fs::copy(&exe_tmp, &exe_dest) {
+            push(&format!("Copy failed: {}", e), -1); return;
+        }
         fs::remove_file(&exe_tmp).ok();
         push("VoidEmulator installed ✓", 97);
 
         // 5. Shortcuts
         push("Creating shortcuts...", 98);
-        let target = PathBuf::from(INSTALL_DIR).join("VoidEmulator.exe");
-        if let Ok(appdata) = std::env::var("APPDATA") {
-            create_shortcut(&target, &PathBuf::from(appdata).join("Microsoft\\Windows\\Start Menu\\Programs\\VoidEmulator.lnk"));
-        }
-        if let Ok(profile) = std::env::var("USERPROFILE") {
-            create_shortcut(&target, &PathBuf::from(profile).join("Desktop\\VoidEmulator.lnk"));
-        }
+        create_shortcut(
+            &exe_dest,
+            &PathBuf::from(std::env::var("APPDATA").unwrap_or_default())
+                .join("Microsoft\\Windows\\Start Menu\\Programs\\VoidEmulator.lnk")
+        );
+        create_shortcut(
+            &exe_dest,
+            &PathBuf::from(std::env::var("USERPROFILE").unwrap_or_default())
+                .join("Desktop\\VoidEmulator.lnk")
+        );
 
         push("Installation complete!", 100);
         *state.done.lock().unwrap() = true;
@@ -154,9 +169,22 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
 }
 
 #[tauri::command]
-fn launch_app(app: tauri::AppHandle) -> Result<(), String> {
-    let exe = PathBuf::from(INSTALL_DIR).join("VoidEmulator.exe");
-    tauri_plugin_opener::open_path(exe, None::<&str>).map_err(|e| e.to_string())
+fn launch_app() -> Result<(), String> {
+    Command::new(install_dir().join("VoidEmulator.exe"))
+        .creation_flags(0x08000000)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn open_discord() -> Result<(), String> {
+    Command::new("cmd")
+        .args(["/c", "start", "", "https://discord.gg/XUe82svaAr"])
+        .creation_flags(0x08000000)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
 }
 
 fn http_download_progress(url: &str, dest: &PathBuf, label: &str, pct_start: i32, pct_end: i32, state: &Arc<InstallState>) -> Result<(), String> {
@@ -169,13 +197,11 @@ fn http_download_progress(url: &str, dest: &PathBuf, label: &str, pct_start: i32
     let mut buf = vec![0u8; 65536];
     let mut downloaded: u64 = 0;
     let mut last_pct = pct_start;
-
     loop {
         let n = reader.read(&mut buf).map_err(|e| e.to_string())?;
         if n == 0 { break; }
         file.write_all(&buf[..n]).map_err(|e| e.to_string())?;
         downloaded += n as u64;
-
         if total > 0 {
             let progress = downloaded as f64 / total as f64;
             let pct = pct_start + ((pct_end - pct_start) as f64 * progress) as i32;
@@ -183,13 +209,14 @@ fn http_download_progress(url: &str, dest: &PathBuf, label: &str, pct_start: i32
                 last_pct = pct;
                 let mb_done = downloaded as f64 / 1_048_576.0;
                 let mb_total = total as f64 / 1_048_576.0;
-                let msg = format!("Downloading {}... {:.1}/{:.1} MB ({:.0}%)", label, mb_done, mb_total, progress * 100.0);
-                state.log.lock().unwrap().push((msg, pct));
+                state.log.lock().unwrap().push((
+                    format!("Downloading {}... {:.1}/{:.1} MB ({:.0}%)", label, mb_done, mb_total, progress * 100.0),
+                    pct
+                ));
             }
         } else {
             let mb_done = downloaded as f64 / 1_048_576.0;
-            let msg = format!("Downloading {}... {:.1} MB", label, mb_done);
-            state.log.lock().unwrap().push((msg, pct_start));
+            state.log.lock().unwrap().push((format!("Downloading {}... {:.1} MB", label, mb_done), pct_start));
         }
     }
     Ok(())
@@ -222,9 +249,8 @@ pub fn run() {
     tauri::Builder::default()
         .manage(state)
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
-            check_installed, start_install, get_progress, launch_app
+            check_installed, start_install, get_progress, launch_app, open_discord
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
