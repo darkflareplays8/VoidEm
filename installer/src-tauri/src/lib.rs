@@ -24,9 +24,14 @@ pub struct InstallState {
 
 #[tauri::command]
 fn check_installed() -> bool {
-    install_dir().join("VoidEmulator.exe").exists()
+    let ready = install_dir().join("VoidEmulator.exe").exists()
         && qemu_dir().join("qemu-system-i386.exe").exists()
-        && images_dir().join("android.img").exists()
+        && images_dir().join("android.img").exists();
+    if ready {
+        // Everything confirmed working - safe to clean up downloads now
+        fs::remove_dir_all(install_dir().join("downloads")).ok();
+    }
+    ready
 }
 
 #[tauri::command]
@@ -194,8 +199,6 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
             .output().ok();
 
         push("Installation complete!", 100);
-        // Only clean up downloads on success
-        fs::remove_dir_all(install_dir().join("downloads")).ok();
         *state.done.lock().unwrap() = true;
     });
     true
