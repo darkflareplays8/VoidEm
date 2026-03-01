@@ -182,8 +182,6 @@ jobs:
           SUMMARY=$(echo "$SUMMARY" | sed 's/\r//g')
           WEBHOOK=$(echo "$WEBHOOK" | tr -d '\r\n ')
 
-          echo "Webhook length: ${#WEBHOOK}"
-
           JSON=$(jq -n \
             --arg v "$VERSION" \
             --arg s "${SUMMARY:-No summary provided.}" \
@@ -192,10 +190,10 @@ jobs:
                 title: "VoidEmulator Update",
                 color: 9109759,
                 fields: [
-                  {name:"Version", value:"```"+$v+"```", inline:false},
-                  {name:"Summary", value:"```"+$s+"```", inline:false},
-                  {name:"Release Details", value:"https://github.com/darkflareplays8/VoidEm/releases/tag/v"+$v, inline:false},
-                  {name:"Source Code", value:"https://github.com/darkflareplays8/VoidEm/tree/v"+$v, inline:false},
+                  {name:"Version", value:("```\n" + $v + "\n```"), inline:false},
+                  {name:"Summary", value:("```\n" + $s + "\n```"), inline:false},
+                  {name:"Release Details", value:("https://github.com/darkflareplays8/VoidEm/releases/tag/v" + $v), inline:false},
+                  {name:"Source Code", value:("https://github.com/darkflareplays8/VoidEm/tree/v" + $v), inline:false},
                   {name:"Update", value:"Simply relaunch the emulator!", inline:false},
                   {name:"Installer", value:"<#1476662691631468565>", inline:false}
                 ],
