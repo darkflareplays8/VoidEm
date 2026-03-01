@@ -269,29 +269,25 @@ jobs:
           SUMMARY: ${{ steps.tag_msg.outputs.BODY }}
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          python3 -c "
-          import os, json, urllib.request
-          v = os.environ['VERSION']
-          s = os.environ.get('SUMMARY', '') or 'No summary provided.'
-          webhook = os.environ['WEBHOOK']
-          cb = chr(96)*3
-          payload = {
-            'embeds': [{
-              'title': 'VoidEmulator Update',
-              'color': 9109759,
-              'fields': [
-                {'name': 'Version', 'value': cb + chr(10) + v + chr(10) + cb, 'inline': False},
-                {'name': 'Summary', 'value': cb + chr(10) + s + chr(10) + cb, 'inline': False},
-                {'name': 'Release Details', 'value': 'https://github.com/darkflareplays8/VoidEm/releases/tag/v' + v, 'inline': False},
-                {'name': 'Source Code', 'value': 'https://github.com/darkflareplays8/VoidEm/tree/v' + v, 'inline': False},
-                {'name': 'Update', 'value': 'Simply relaunch the emulator!', 'inline': False},
-                {'name': 'Installer', 'value': '<#1476662691631468565>', 'inline': False}
-              ],
-              'footer': {'text': 'VoidHub CI'}
-            }]
-          }
-          data = json.dumps(payload).encode()
-          req = urllib.request.Request(webhook, data=data, headers={'Content-Type': 'application/json'}, method='POST')
-          urllib.request.urlopen(req)
-          print('Discord notified!')
-          "
+          VERSION=$(echo "$VERSION" | tr -d '\r\n')
+          SUMMARY=$(echo "$SUMMARY" | sed 's/\r//g')
+          WEBHOOK=$(echo "$WEBHOOK" | tr -d '\r\n ')
+          JSON=$(jq -n \
+            --arg v "$VERSION" \
+            --arg s "${SUMMARY:-No summary provided.}" \
+            '{
+              embeds: [{
+                title: "VoidEmulator Update",
+                color: 9109759,
+                fields: [
+                  {name:"Version", value:("```\n" + $v + "\n```"), inline:false},
+                  {name:"Summary", value:("```\n" + $s + "\n```"), inline:false},
+                  {name:"Release Details", value:("https://github.com/darkflareplays8/VoidEm/releases/tag/v" + $v), inline:false},
+                  {name:"Source Code", value:("https://github.com/darkflareplays8/VoidEm/tree/v" + $v), inline:false},
+                  {name:"Update", value:"Simply relaunch the emulator!", inline:false},
+                  {name:"Installer", value:"<#1476662691631468565>", inline:false}
+                ],
+                footer: {text:"VoidHub CI"}
+              }]
+            }')
+          curl -f -H "Content-Type: application/json" -d "$JSON" "$WEBHOOK"
