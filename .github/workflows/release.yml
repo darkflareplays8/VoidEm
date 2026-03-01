@@ -1,15 +1,12 @@
 name: Release
-
 on:
   push:
     tags:
       - 'v*'
     branches:
       - main
-
 permissions:
   contents: write
-
 jobs:
   warm-cache-installer:
     if: github.ref == 'refs/heads/main'
@@ -22,19 +19,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: actions/cache@v4
+      - name: Cache Rust registry
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
           key: cargo-registry-${{ hashFiles('Cargo.lock') }}
           restore-keys: cargo-registry-
-      - uses: actions/cache@v4
+      - name: Cache Rust build installer
+        uses: actions/cache@v4
         with:
           path: target
           key: cargo-build-installer-${{ hashFiles('Cargo.lock') }}
           restore-keys: cargo-build-installer-
-      - uses: actions/cache@v4
+      - name: Cache node_modules installer
+        uses: actions/cache@v4
         with:
           path: installer/node_modules
           key: npm-installer-${{ hashFiles('installer/package-lock.json', 'installer/package.json') }}
@@ -58,19 +58,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: actions/cache@v4
+      - name: Cache Rust registry
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
           key: cargo-registry-${{ hashFiles('Cargo.lock') }}
           restore-keys: cargo-registry-
-      - uses: actions/cache@v4
+      - name: Cache Rust build emulator
+        uses: actions/cache@v4
         with:
           path: target
           key: cargo-build-emulator-${{ hashFiles('Cargo.lock') }}
           restore-keys: cargo-build-emulator-
-      - uses: actions/cache@v4
+      - name: Cache node_modules emulator
+        uses: actions/cache@v4
         with:
           path: emulator/node_modules
           key: npm-emulator-${{ hashFiles('emulator/package-lock.json', 'emulator/package.json') }}
@@ -88,13 +91,39 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable-x86_64-pc-windows-msvc
-      - name: Sync version
+
+      - name: Cache Rust registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-registry-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-registry-
+
+      - name: Cache Rust build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: cargo-build-installer-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-build-installer-
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: installer/node_modules
+          key: npm-installer-${{ hashFiles('installer/package-lock.json', 'installer/package.json') }}
+          restore-keys: npm-installer-
+
+      - name: Sync version from release.json
         shell: pwsh
         run: |
           $rel = Get-Content release.json | ConvertFrom-Json
@@ -102,20 +131,40 @@ jobs:
           $conf = Get-Content installer/src-tauri/tauri.conf.json | ConvertFrom-Json
           $conf.version = $ver
           $conf | ConvertTo-Json -Depth 10 | Set-Content installer/src-tauri/tauri.conf.json
-      - name: Install & build
+          Write-Host "Set installer version to $ver"
+
+      - name: Install and build
         shell: pwsh
         run: |
           cd installer
           npm install
-          npm run build
+          $attempts = 0
+          do {
+            $attempts++
+            Write-Host "Build attempt $attempts..."
+            npm run build
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempts -lt 3) { Write-Host "Retrying in 10s..."; Start-Sleep 10 }
+          } while ($attempts -lt 3)
+          exit $LASTEXITCODE
+
       - name: Get version
         id: ver
         shell: bash
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-      - uses: softprops/action-gh-release@v2
+
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
         with:
           name: VoidEmulator v${{ steps.ver.outputs.VERSION }}
+          body: |
+            ## VoidEmulator v${{ steps.ver.outputs.VERSION }}
+            **Download voidinstaller.exe** to install VoidEmulator on your PC.
+            The installer sets everything up automatically.
+            Support: https://discord.gg/XUe82svaAr
           files: target/release/voidinstaller.exe
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -124,13 +173,39 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable-x86_64-pc-windows-msvc
-      - name: Sync version
+
+      - name: Cache Rust registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-registry-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-registry-
+
+      - name: Cache Rust build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: cargo-build-emulator-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-build-emulator-
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: emulator/node_modules
+          key: npm-emulator-${{ hashFiles('emulator/package-lock.json', 'emulator/package.json') }}
+          restore-keys: npm-emulator-
+
+      - name: Sync version from release.json
         shell: pwsh
         run: |
           $rel = Get-Content release.json | ConvertFrom-Json
@@ -138,13 +213,31 @@ jobs:
           $conf = Get-Content emulator/src-tauri/tauri.conf.json | ConvertFrom-Json
           $conf.version = $ver
           $conf | ConvertTo-Json -Depth 10 | Set-Content emulator/src-tauri/tauri.conf.json
-      - name: Install & build
+          (Get-Content emulator/src-tauri/src/lib.rs) -replace 'const CURRENT_VERSION: &str = "[^"]*"', "const CURRENT_VERSION: &str = `"$ver`"" | Set-Content emulator/src-tauri/src/lib.rs
+          Write-Host "Set emulator version to $ver"
+
+      - name: Install and build
         shell: pwsh
         run: |
           cd emulator
           npm install
-          npm run build
-      - uses: softprops/action-gh-release@v2
+          $attempts = 0
+          do {
+            $attempts++
+            Write-Host "Build attempt $attempts..."
+            npm run build
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempts -lt 3) { Write-Host "Retrying in 10s..."; Start-Sleep 10 }
+          } while ($attempts -lt 3)
+          exit $LASTEXITCODE
+
+      - name: Get version
+        id: ver
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
         with:
           files: target/release/voidemulator.exe
         env:
@@ -158,16 +251,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Get version
         id: ver
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
       - name: Get tag message
         id: tag_msg
         run: |
           git fetch --tags --force
-          BODY=$(git tag -l --format='%(contents:body)' "${{ github.ref_name }}" | head -20)
+          BODY=$(git for-each-ref --format='%(contents:body)' "refs/tags/${{ github.ref_name }}")
           echo "BODY<<EOF" >> $GITHUB_OUTPUT
           echo "$BODY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -178,29 +269,29 @@ jobs:
           SUMMARY: ${{ steps.tag_msg.outputs.BODY }}
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          VERSION=$(echo "$VERSION" | tr -d '\r\n')
-          SUMMARY=$(echo "$SUMMARY" | sed 's/\r//g')
-          WEBHOOK=$(echo "$WEBHOOK" | tr -d '\r\n ')
-
-          JSON=$(jq -n \
-            --arg v "$VERSION" \
-            --arg s "${SUMMARY:-No summary provided.}" \
-            '{
-              embeds: [{
-                title: "VoidEmulator Update",
-                color: 9109759,
-                fields: [
-                  {name:"Version", value:("```\n" + $v + "\n```"), inline:false},
-                  {name:"Summary", value:("```\n" + $s + "\n```"), inline:false},
-                  {name:"Release Details", value:("https://github.com/darkflareplays8/VoidEm/releases/tag/v" + $v), inline:false},
-                  {name:"Source Code", value:("https://github.com/darkflareplays8/VoidEm/tree/v" + $v), inline:false},
-                  {name:"Update", value:"Simply relaunch the emulator!", inline:false},
-                  {name:"Installer", value:"<#1476662691631468565>", inline:false}
-                ],
-                footer: {text:"VoidHub CI"}
-              }]
-            }')
-
-          curl -f -H "Content-Type: application/json" \
-               -d "$JSON" \
-               "$WEBHOOK"
+          python3 -c "
+          import os, json, urllib.request
+          v = os.environ['VERSION']
+          s = os.environ.get('SUMMARY', '') or 'No summary provided.'
+          webhook = os.environ['WEBHOOK']
+          cb = chr(96)*3
+          payload = {
+            'embeds': [{
+              'title': 'VoidEmulator Update',
+              'color': 9109759,
+              'fields': [
+                {'name': 'Version', 'value': cb + chr(10) + v + chr(10) + cb, 'inline': False},
+                {'name': 'Summary', 'value': cb + chr(10) + s + chr(10) + cb, 'inline': False},
+                {'name': 'Release Details', 'value': 'https://github.com/darkflareplays8/VoidEm/releases/tag/v' + v, 'inline': False},
+                {'name': 'Source Code', 'value': 'https://github.com/darkflareplays8/VoidEm/tree/v' + v, 'inline': False},
+                {'name': 'Update', 'value': 'Simply relaunch the emulator!', 'inline': False},
+                {'name': 'Installer', 'value': '<#1476662691631468565>', 'inline': False}
+              ],
+              'footer': {'text': 'VoidHub CI'}
+            }]
+          }
+          data = json.dumps(payload).encode()
+          req = urllib.request.Request(webhook, data=data, headers={'Content-Type': 'application/json'}, method='POST')
+          urllib.request.urlopen(req)
+          print('Discord notified!')
+          "
