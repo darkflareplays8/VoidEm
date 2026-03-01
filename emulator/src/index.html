@@ -246,8 +246,8 @@
 </div>
 
 <script>
-const invoke = window.__TAURI__.core.invoke;
-const CURRENT_VERSION = document.querySelector('meta[name="version"]')?.content || '2.6.3';
+const invoke = (...args) => window.__TAURI__.core.invoke(...args);
+const CURRENT_VERSION = '2.0.2'; // CI replaces this with actual version
 
 let instances = [];
 let selectedName = null;
