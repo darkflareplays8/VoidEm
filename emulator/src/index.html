@@ -18,7 +18,7 @@
   .header { display:flex; align-items:center; justify-content:space-between; padding:10px 20px; border-bottom:1px solid var(--border); background:var(--surface); flex-shrink:0; }
   .header-left { display:flex; align-items:baseline; gap:10px; }
   .logo { font-family:'VT323',monospace; font-size:26px; color:var(--glow); letter-spacing:4px; text-shadow:0 0 15px var(--accent); }
-  .version-badge { font-size:10px; color:var(--dim); letter-spacing:2px; background:rgba(139,47,201,0.15); border:1px solid var(--border); padding:2px 7px; border-radius:3px; cursor:default; }
+  .version-badge { font-size:14px; font-family:"VT323",monospace; color:var(--accent2); letter-spacing:2px; background:rgba(139,47,201,0.15); border:1px solid var(--border); padding:2px 10px; border-radius:3px; cursor:default; }
   .version-badge.update-available { color:var(--yellow); border-color:var(--yellow); cursor:default; }
   @keyframes pulse-yellow { 0%,100%{box-shadow:0 0 0 0 rgba(255,200,50,0.3)} 50%{box-shadow:0 0 8px 2px rgba(255,200,50,0.2)} }
   .header-btns { display:flex; gap:8px; }
@@ -171,7 +171,8 @@
       <div class="big">VOID</div>
       <div style="font-size:12px;letter-spacing:3px;margin-top:8px;">Select an instance to start</div>
     </div>
-    <img id="screen" alt="Android Screen" />
+    <canvas id="screen" style="display:none;max-width:100%;max-height:100%;"></canvas>
+    <div id="vnc-status" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--dim);font-size:11px;letter-spacing:2px;text-align:center;"></div>
   </div>
   <div class="controls">
     <div class="ctrl-title">Controls</div>
@@ -256,8 +257,9 @@ let busy = false;
 // Perf tracking
 let frameCount = 0;
 let lastFrameTime = 0;
-let lastCaptureDuration = 0;
 let totalFrames = 0;
+let rfb = null; // noVNC RFB connection
+let fpsInterval = null;
 
 // Files state
 let filesInstance = null;
@@ -356,9 +358,16 @@ function selectInstance(name) {
   renderInstances();
   const inst = instances.find(i => i.name === name);
   const hasScreen = inst && inst.running;
-  document.getElementById('screen').style.display = hasScreen ? 'block' : 'none';
   document.getElementById('placeholder').style.display = hasScreen ? 'none' : 'flex';
-  if (!hasScreen) resetPerf();
+  if (hasScreen) {
+    document.getElementById('vnc-status').style.display = 'block';
+    document.getElementById('vnc-status').textContent = 'Reconnecting...';
+    setTimeout(() => connectVNC(inst.index), 500);
+  } else {
+    document.getElementById('screen').style.display = 'none';
+    document.getElementById('vnc-status').style.display = 'none';
+    resetPerf();
+  }
   setStatus('');
 }
 
@@ -408,9 +417,10 @@ async function startSelected() {
     await persistInstances();
     renderInstances();
     document.getElementById('placeholder').style.display = 'none';
-    document.getElementById('screen').style.display = 'block';
-    clearInterval(screenInterval);
-    screenInterval = setInterval(doCapture, 2000);
+    document.getElementById('vnc-status').style.display = 'block';
+    document.getElementById('vnc-status').textContent = 'Connecting to display...';
+    // Wait a moment for QEMU to start VNC server, then connect
+    setTimeout(() => connectVNC(inst.index), 3000);
     setStatus('Running');
   } else { setStatus('Failed to start'); }
   setBusy(false);
@@ -424,9 +434,11 @@ async function stopSelected() {
   await invoke('stop_instance', { name: inst.name });
   inst.running = false;
   await persistInstances();
-  clearInterval(screenInterval);
-  screenInterval = null;
+  if (rfb) { try { rfb.disconnect(); } catch(e) {} rfb = null; }
+  clearInterval(fpsInterval);
+  fpsInterval = null;
   document.getElementById('screen').style.display = 'none';
+  document.getElementById('vnc-status').style.display = 'none';
   document.getElementById('placeholder').style.display = 'flex';
   resetPerf();
   renderInstances();
@@ -444,14 +456,18 @@ function confirmDelete() {
 async function doDelete() {
   closeModal('modal-delete');
   if (!selectedName) return;
+  if (rfb) { try { rfb.disconnect(); } catch(e) {} rfb = null; }
+  clearInterval(fpsInterval);
   setBusy(true, 'Deleting...');
   await invoke('delete_instance', { name: selectedName });
   instances = instances.filter(i => i.name !== selectedName);
   instances.forEach((inst, i) => inst.index = i);
   selectedName = null;
-  clearInterval(screenInterval);
-  screenInterval = null;
+  if (rfb) { try { rfb.disconnect(); } catch(e) {} rfb = null; }
+  clearInterval(fpsInterval);
+  fpsInterval = null;
   document.getElementById('screen').style.display = 'none';
+  document.getElementById('vnc-status').style.display = 'none';
   document.getElementById('placeholder').style.display = 'flex';
   resetPerf();
   await persistInstances();
@@ -461,29 +477,56 @@ async function doDelete() {
 }
 
 // ─── Screen capture + perf ────────────────────────────
-async function doCapture() {
-  if (!selectedName) return;
-  const inst = instances.find(i => i.name === selectedName);
-  if (!inst || !inst.running) return;
-  const adb_port = 5554 + inst.index * 2;
-  const t0 = performance.now();
-  const data = await invoke('capture_screen', { name: inst.name, adb_port });
-  const dur = performance.now() - t0;
-  if (data) {
-    document.getElementById('screen').src = 'data:image/png;base64,' + data;
-    lastCaptureDuration = dur;
-    totalFrames++;
-    frameCount++;
-    // FPS estimate based on capture interval vs duration
-    const now = Date.now();
-    if (lastFrameTime) {
-      const elapsed = (now - lastFrameTime) / 1000;
-      const fps = Math.round(1 / Math.max(elapsed, 0.1));
-      updatePerf(fps, dur);
+function connectVNC(index) {
+  const wsPort = 6900 + index;
+  const canvas = document.getElementById('screen');
+  const statusEl = document.getElementById('vnc-status');
+
+  // Dynamically import noVNC RFB
+  import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.4.0/core/rfb.js').then(({ default: RFB }) => {
+    try {
+      if (rfb) { try { rfb.disconnect(); } catch(e) {} }
+      rfb = new RFB(canvas.parentElement, `ws://127.0.0.1:${wsPort}`, {
+        credentials: { password: '' }
+      });
+      rfb.scaleViewport = true;
+      rfb.resizeSession = false;
+
+      rfb.addEventListener('connect', () => {
+        canvas.style.display = 'block';
+        statusEl.style.display = 'none';
+        setStatus('Connected');
+        // Start FPS counter from VNC frame updates
+        let lastCount = 0;
+        fpsInterval = setInterval(() => {
+          const fps = frameCount - lastCount;
+          lastCount = frameCount;
+          totalFrames += fps;
+          updatePerf(fps, 0);
+          document.getElementById('perf-frames').textContent = totalFrames;
+        }, 1000);
+      });
+
+      rfb.addEventListener('disconnect', (e) => {
+        canvas.style.display = 'none';
+        statusEl.style.display = 'block';
+        statusEl.textContent = e.detail.clean ? 'Disconnected' : 'Connection lost';
+        clearInterval(fpsInterval);
+      });
+
+      rfb.addEventListener('credentialsrequired', () => rfb.sendCredentials({ password: '' }));
+
+      // Track frames for FPS
+      rfb.addEventListener('desktopsize', () => { frameCount++; });
+
+    } catch(e) {
+      statusEl.textContent = 'VNC error: ' + e.message;
+      console.error('VNC error:', e);
     }
-    lastFrameTime = now;
-    document.getElementById('perf-frames').textContent = totalFrames;
-  }
+  }).catch(err => {
+    statusEl.textContent = 'Failed to load VNC client';
+    console.error(err);
+  });
 }
 
 function updatePerf(fps, latencyMs) {
@@ -491,15 +534,14 @@ function updatePerf(fps, latencyMs) {
   const latEl = document.getElementById('perf-lat');
   const barFps = document.getElementById('bar-fps');
   const barLat = document.getElementById('bar-lat');
-  fpsEl.textContent = fps + ' fps';
-  fpsEl.className = 'perf-val ' + (fps >= 20 ? 'good' : fps >= 10 ? 'warn' : 'bad');
-  barFps.style.width = Math.min(fps / 30 * 100, 100) + '%';
-  barFps.style.background = fps >= 20 ? 'var(--green)' : fps >= 10 ? 'var(--yellow)' : 'var(--red)';
-  const lat = Math.round(latencyMs);
-  latEl.textContent = lat + ' ms';
-  latEl.className = 'perf-val ' + (lat < 500 ? 'good' : lat < 1500 ? 'warn' : 'bad');
-  barLat.style.width = Math.min(lat / 2000 * 100, 100) + '%';
-  barLat.style.background = lat < 500 ? 'var(--green)' : lat < 1500 ? 'var(--yellow)' : 'var(--red)';
+  if (fps > 0) {
+    fpsEl.textContent = fps + ' fps';
+    fpsEl.className = 'perf-val ' + (fps >= 20 ? 'good' : fps >= 10 ? 'warn' : 'bad');
+    barFps.style.width = Math.min(fps / 30 * 100, 100) + '%';
+    barFps.style.background = fps >= 20 ? 'var(--green)' : fps >= 10 ? 'var(--yellow)' : 'var(--red)';
+  }
+  const lat = document.getElementById('perf-lat');
+  lat.textContent = latencyMs > 0 ? latencyMs + ' ms' : '—';
 }
 
 function resetPerf() {
@@ -516,10 +558,8 @@ function resetPerf() {
 }
 
 async function captureScreen() {
-  if (!selectedName || busy) return;
-  setBusy(true, 'Capturing...');
-  await doCapture();
-  setBusy(false, '');
+  // With VNC, capture is handled by right-clicking the canvas - just focus it
+  if (rfb) rfb.focus();
 }
 
 // ─── File Manager ─────────────────────────────────────

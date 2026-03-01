@@ -2,24 +2,34 @@
   "productName": "VoidEmulator",
   "version": "2.0.2",
   "identifier": "com.voidhub.emulator",
-  "build": { "frontendDist": "../src" },
+  "build": {
+    "frontendDist": "../src"
+  },
   "app": {
-    "windows": [{
-      "title": "VoidEmulator",
-      "width": 1280,
-      "height": 800,
-      "minWidth": 900,
-      "minHeight": 600,
-      "resizable": true
-    }],
-    "security": { "csp": null },
+    "windows": [
+      {
+        "title": "VoidEmulator",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' ws://127.0.0.1:* https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:;"
+    },
     "withGlobalTauri": true
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
-    "icon": ["icons/icon.ico"],
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/icon.ico"
+    ],
     "publisher": "VoidHub",
-    "copyright": "Copyright © 2026 VoidHub"
+    "copyright": "Copyright \u00a9 2026 VoidHub"
   }
 }
