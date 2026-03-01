@@ -66,16 +66,30 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
                 push(&format!("QEMU download failed: {}", e), -1); return;
             }
             push("Extracting QEMU...", 21);
-            // Extract to parent dir - zip contains 'qemu' folder so it becomes our qemu dir
             let qemu_parent = qemu.parent().unwrap_or(&qemu);
             fs::create_dir_all(&qemu_parent).ok();
-            // Use tar (built into Windows 10/11) - much faster than Expand-Archive
-            Command::new("tar")
+            let tar_result = Command::new("tar")
                 .args(["-xf", zip.to_str().unwrap(), "-C", qemu_parent.to_str().unwrap()])
                 .creation_flags(0x08000000)
-                .output().ok();
+                .output();
+            match &tar_result {
+                Ok(o) => {
+                    let stdout = String::from_utf8_lossy(&o.stdout);
+                    let stderr = String::from_utf8_lossy(&o.stderr);
+                    push(&format!("tar exit:{} stdout:{} stderr:{}", o.status.code().unwrap_or(-1), stdout.trim(), stderr.trim()), 22);
+                }
+                Err(e) => { push(&format!("tar failed to run: {}", e), -1); return; }
+            }
+            // List what's actually in qemu dir and parent after extraction
+            let parent_contents = fs::read_dir(&qemu_parent).map(|e| {
+                e.flatten().map(|f| f.file_name().to_string_lossy().to_string()).collect::<Vec<_>>().join(", ")
+            }).unwrap_or_else(|_| "unreadable".into());
+            let qemu_contents = fs::read_dir(&qemu).map(|e| {
+                e.flatten().map(|f| f.file_name().to_string_lossy().to_string()).collect::<Vec<_>>().join(", ")
+            }).unwrap_or_else(|_| "missing".into());
+            push(&format!("parent:[{}] qemu:[{}]", parent_contents, qemu_contents), 23);
             if !qemu_exe.exists() {
-                push("QEMU extraction failed!", -1); return;
+                push("QEMU extraction failed - qemu-system-i386.exe not found", -1); return;
             }
         }
         push("QEMU ready ✓", 25);
