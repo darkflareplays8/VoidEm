@@ -1,9 +1,13 @@
+use std::collections::HashMap;
 use std::process::{Command, Stdio};
+use std::os::windows::process::CommandExt;
 use std::path::PathBuf;
 use std::fs;
+use std::sync::Mutex;
+use tauri::State;
 
-const RELEASE_JSON: &str = "https://raw.githubusercontent.com/darkflareplays8/VoidEm/main/release.json";
-const CURRENT_VERSION: &str = "2.0.2";
+const CURRENT_VERSION: &str = "2.6.2";
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 fn install_dir() -> PathBuf {
     PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| "C:\\Users\\Public".into())).join("VoidEmulator")
@@ -12,52 +16,88 @@ fn qemu_dir() -> PathBuf { install_dir().join("data").join("qemu") }
 fn images_dir() -> PathBuf { install_dir().join("data").join("images") }
 fn instances_dir() -> PathBuf { install_dir().join("data").join("instances") }
 fn qemu_exe() -> PathBuf { qemu_dir().join("qemu-system-i386.exe") }
-fn qemu_img() -> PathBuf { qemu_dir().join("qemu-img.exe") }
+fn qemu_img_exe() -> PathBuf { qemu_dir().join("qemu-img.exe") }
 fn adb_exe() -> PathBuf { qemu_dir().join("adb.exe") }
 fn base_img() -> PathBuf { images_dir().join("android.img") }
+fn instance_dir(name: &str) -> PathBuf { instances_dir().join(name) }
+fn overlay_path(name: &str) -> PathBuf { instance_dir(name).join("overlay.qcow2") }
+fn instances_json() -> PathBuf { install_dir().join("instances.json") }
+
+struct RunningInstances(Mutex<HashMap<String, u32>>);
 
 #[tauri::command]
 fn check_setup() -> serde_json::Value {
     let qemu_ok = qemu_exe().exists();
     let adb_ok = adb_exe().exists();
     let image_ok = base_img().exists();
-    // Only clean downloads once everything is confirmed ready
     if qemu_ok && adb_ok && image_ok {
         fs::remove_dir_all(install_dir().join("downloads")).ok();
     }
     serde_json::json!({
-        "qemu": qemu_ok,
-        "adb": adb_ok,
-        "image": image_ok,
+        "qemu": qemu_ok, "adb": adb_ok, "image": image_ok,
         "qemu_path": qemu_exe().to_str().unwrap_or(""),
         "image_path": base_img().to_str().unwrap_or(""),
     })
 }
 
 #[tauri::command]
+fn load_instances() -> serde_json::Value {
+    let path = instances_json();
+    if path.exists() {
+        if let Ok(data) = fs::read_to_string(&path) {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&data) {
+                return v;
+            }
+        }
+    }
+    serde_json::json!([])
+}
+
+#[tauri::command]
+fn save_instances(instances: serde_json::Value) -> bool {
+    fs::create_dir_all(install_dir()).ok();
+    fs::write(instances_json(), serde_json::to_string_pretty(&instances).unwrap_or_default()).is_ok()
+}
+
+#[tauri::command]
 fn open_discord() -> Result<(), String> {
-    Command::new("cmd")
-        .args(["/c", "start", "", "https://discord.gg/XUe82svaAr"])
-        .spawn()
-        .map(|_| ())
-        .map_err(|e| e.to_string())
+    Command::new("cmd").args(["/c", "start", "", "https://discord.gg/XUe82svaAr"])
+        .creation_flags(CREATE_NO_WINDOW).spawn().map(|_| ()).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn create_overlay(id: String) -> bool {
-    fs::create_dir_all(instances_dir()).ok();
-    let overlay = instances_dir().join(format!("{}.qcow2", id));
+fn create_overlay(name: String) -> bool {
+    let dir = instance_dir(&name);
+    let overlay = overlay_path(&name);
+    fs::create_dir_all(&dir).ok();
     if overlay.exists() { return true; }
-    Command::new(qemu_img())
+    Command::new(qemu_img_exe())
         .args(["create", "-f", "qcow2", "-b", base_img().to_str().unwrap(), "-F", "raw", overlay.to_str().unwrap()])
-        .output().map(|o| o.status.success()).unwrap_or(false)
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
 }
 
 #[tauri::command]
-fn start_qemu(id: String, index: u32) -> bool {
-    let overlay = instances_dir().join(format!("{}.qcow2", id));
+fn delete_instance(name: String, state: State<RunningInstances>) -> bool {
+    if let Ok(mut map) = state.0.lock() {
+        if let Some(pid) = map.remove(&name) { kill_pid(pid); }
+    }
+    fs::remove_dir_all(instance_dir(&name)).ok();
+    true
+}
+
+#[tauri::command]
+fn start_qemu(name: String, index: u32, state: State<RunningInstances>) -> bool {
+    let overlay = overlay_path(&name);
+    if !overlay.exists() { return false; }
+    // Kill any existing process for this instance first
+    if let Ok(mut map) = state.0.lock() {
+        if let Some(pid) = map.remove(&name) { kill_pid(pid); }
+    }
     let adb_port = 5554 + index * 2;
-    Command::new(qemu_exe())
+    match Command::new(qemu_exe())
         .args([
             "-m", "512", "-smp", "1",
             "-drive", &format!("file={},format=qcow2", overlay.to_str().unwrap()),
@@ -67,28 +107,45 @@ fn start_qemu(id: String, index: u32) -> bool {
             "-no-reboot", "-nographic",
         ])
         .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
-        .spawn().is_ok()
-}
-
-#[tauri::command]
-fn stop_instance(_id: String) -> bool { true }
-
-#[tauri::command]
-fn run_adb(args: Vec<String>) -> String {
-    match Command::new(adb_exe()).args(&args).output() {
-        Ok(out) => String::from_utf8_lossy(&out.stdout).to_string(),
-        Err(e) => format!("Error: {}", e),
+        .creation_flags(CREATE_NO_WINDOW)
+        .spawn()
+    {
+        Ok(child) => {
+            let pid = child.id();
+            if let Ok(mut map) = state.0.lock() { map.insert(name, pid); }
+            true
+        }
+        Err(_) => false
     }
 }
 
 #[tauri::command]
-fn capture_screen(id: String, adb_port: u32) -> String {
-    let tmp = std::env::temp_dir().join(format!("void_{}.png", id));
+fn stop_instance(name: String, state: State<RunningInstances>) -> bool {
+    if let Ok(mut map) = state.0.lock() {
+        if let Some(pid) = map.remove(&name) {
+            kill_pid(pid);
+            return true;
+        }
+    }
+    false
+}
+
+fn kill_pid(pid: u32) {
+    Command::new("taskkill").args(["/F", "/PID", &pid.to_string()])
+        .creation_flags(CREATE_NO_WINDOW).output().ok();
+}
+
+#[tauri::command]
+fn capture_screen(name: String, adb_port: u32) -> String {
+    let tmp = std::env::temp_dir().join(format!("void_{}.png", name));
     let device = format!("127.0.0.1:{}", adb_port);
-    Command::new(adb_exe()).args(["-s", &device, "shell", "screencap", "-p", "/sdcard/sc.png"]).output().ok();
-    Command::new(adb_exe()).args(["-s", &device, "pull", "/sdcard/sc.png", tmp.to_str().unwrap()]).output().ok();
+    Command::new(adb_exe()).args(["-s", &device, "shell", "screencap", "-p", "/sdcard/sc.png"])
+        .creation_flags(CREATE_NO_WINDOW).output().ok();
+    Command::new(adb_exe()).args(["-s", &device, "pull", "/sdcard/sc.png", tmp.to_str().unwrap()])
+        .creation_flags(CREATE_NO_WINDOW).output().ok();
     if tmp.exists() {
         let data = fs::read(&tmp).unwrap_or_default();
+        fs::remove_file(&tmp).ok();
         base64_encode(&data)
     } else { String::new() }
 }
@@ -114,9 +171,10 @@ fn base64_encode(data: &[u8]) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .manage(RunningInstances(Mutex::new(HashMap::new())))
         .invoke_handler(tauri::generate_handler![
-            check_setup, open_discord,
-            create_overlay, start_qemu, stop_instance, run_adb, capture_screen,
+            check_setup, open_discord, load_instances, save_instances,
+            create_overlay, delete_instance, start_qemu, stop_instance, capture_screen,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
