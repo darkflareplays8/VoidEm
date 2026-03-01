@@ -13,7 +13,7 @@ const QEMU_URL: &str = "https://github.com/darkflareplays8/VoidEm/releases/downl
 fn install_dir() -> PathBuf {
     PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| "C:\\Users\\Public".into())).join("VoidEmulator")
 }
-fn qemu_dir() -> PathBuf { PathBuf::from("C:\\Program Files\\qemu") }
+fn qemu_dir() -> PathBuf { install_dir().join("data").join("qemu") }
 fn images_dir() -> PathBuf { install_dir().join("data").join("images") }
 
 #[derive(Default)]

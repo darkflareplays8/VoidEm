@@ -8,7 +8,7 @@ const CURRENT_VERSION: &str = "2.0.2";
 fn install_dir() -> PathBuf {
     PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| "C:\\Users\\Public".into())).join("VoidEmulator")
 }
-fn qemu_dir() -> PathBuf { PathBuf::from("C:\\Program Files\\qemu") }
+fn qemu_dir() -> PathBuf { install_dir().join("data").join("qemu") }
 fn images_dir() -> PathBuf { install_dir().join("data").join("images") }
 fn instances_dir() -> PathBuf { install_dir().join("data").join("instances") }
 fn qemu_exe() -> PathBuf { qemu_dir().join("qemu-system-i386.exe") }
