@@ -19,7 +19,7 @@
   .header-left { display:flex; align-items:baseline; gap:10px; }
   .logo { font-family:'VT323',monospace; font-size:26px; color:var(--glow); letter-spacing:4px; text-shadow:0 0 15px var(--accent); }
   .version-badge { font-size:10px; color:var(--dim); letter-spacing:2px; background:rgba(139,47,201,0.15); border:1px solid var(--border); padding:2px 7px; border-radius:3px; cursor:default; }
-  .version-badge.update-available { color:var(--yellow); border-color:var(--yellow); cursor:pointer; animation: pulse-yellow 2s infinite; }
+  .version-badge.update-available { color:var(--yellow); border-color:var(--yellow); cursor:default; }
   @keyframes pulse-yellow { 0%,100%{box-shadow:0 0 0 0 rgba(255,200,50,0.3)} 50%{box-shadow:0 0 8px 2px rgba(255,200,50,0.2)} }
   .header-btns { display:flex; gap:8px; }
   .hbtn { padding:6px 14px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:600; letter-spacing:2px; text-transform:uppercase; cursor:pointer; border-radius:3px; transition:all 0.2s; }
@@ -274,10 +274,8 @@ async function checkVersion() {
     const data = await resp.json();
     const latest = data.version;
     if (latest && latest !== CURRENT_VERSION) {
-      badge.textContent = 'v' + CURRENT_VERSION + ' → v' + latest;
-      badge.classList.add('update-available');
-      badge.title = 'Update available! Click to update';
-      badge.onclick = () => fakeUpdate(latest);
+      // Auto-update immediately on launch
+      fakeUpdate(latest);
     }
   } catch(e) {}
 }
@@ -292,18 +290,22 @@ function fakeUpdate(newVer) {
     [15, 'Downloading VoidEmulator v' + newVer + '...'],
     [55, 'Installing update...'],
     [85, 'Finalizing...'],
-    [100, 'Complete! Restarting...'],
+    [100, 'Update complete!'],
   ];
   let i = 0;
   function next() {
     if (i >= steps.length) {
-      setTimeout(() => overlay.classList.remove('show'), 800);
+      setTimeout(() => {
+        overlay.classList.remove('show');
+        // Update badge to show new version
+        document.getElementById('version-badge').textContent = 'v' + newVer;
+      }, 1000);
       return;
     }
     const [pct, msg] = steps[i++];
     bar.style.width = pct + '%';
     sub.textContent = msg;
-    setTimeout(next, i === steps.length ? 600 : 600 + Math.random() * 400);
+    setTimeout(next, i === steps.length ? 800 : 500 + Math.random() * 400);
   }
   next();
 }
@@ -556,6 +558,8 @@ async function loadFiles() {
   pathEl.textContent = filesInstance + ':' + filesPath;
   list.innerHTML = '<div class="files-loading">Loading...</div>';
   // Use ADB ls -la
+  // Connect ADB first
+  await invoke('run_adb', { args: ['connect', '127.0.0.1:' + adb_port] });
   const output = await invoke('run_adb', { args: ['-s', '127.0.0.1:' + adb_port, 'shell', 'ls', '-la', filesPath] });
   if (!output || output.startsWith('Error')) {
     if (!inst.running) {
@@ -632,6 +636,7 @@ async function downloadFile(name) {
   const inst = instances.find(i => i.name === filesInstance);
   if (!inst) return;
   const adb_port = 5554 + inst.index * 2;
+  await invoke('run_adb', { args: ['connect', '127.0.0.1:' + adb_port] });
   const remotePath = filesPath + '/' + name;
   setStatus('Downloading ' + name + '...');
   const result = await invoke('adb_pull_to_downloads', {

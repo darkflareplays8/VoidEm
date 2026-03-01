@@ -96,12 +96,12 @@ fn start_qemu(name: String, index: u32, state: State<RunningInstances>) -> bool 
     let adb_port = 5554 + index * 2;
     match Command::new(qemu_exe())
         .args([
-            "-m", "512", "-smp", "1",
+            "-m", "1024", "-smp", "2",
             "-drive", &format!("file={},format=qcow2", overlay.to_str().unwrap()),
             "-net", "nic",
             "-net", &format!("user,hostfwd=tcp:127.0.0.1:{}-:5555", adb_port),
             "-vga", "std", "-usb", "-device", "usb-tablet",
-            "-no-reboot", "-nographic",
+            "-no-reboot", "-display", "none",
         ])
         .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
         .creation_flags(CREATE_NO_WINDOW).spawn()
@@ -140,6 +140,9 @@ fn run_adb(args: Vec<String>) -> String {
 fn capture_screen(name: String, adb_port: u32) -> String {
     let tmp = std::env::temp_dir().join(format!("void_{}.png", name));
     let device = format!("127.0.0.1:{}", adb_port);
+    // Connect ADB first (idempotent, safe to call every time)
+    Command::new(adb_exe()).args(["connect", &device])
+        .creation_flags(CREATE_NO_WINDOW).output().ok();
     Command::new(adb_exe()).args(["-s", &device, "shell", "screencap", "-p", "/sdcard/sc.png"])
         .creation_flags(CREATE_NO_WINDOW).output().ok();
     Command::new(adb_exe()).args(["-s", &device, "pull", "/sdcard/sc.png", tmp.to_str().unwrap()])

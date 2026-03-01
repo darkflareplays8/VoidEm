@@ -214,6 +214,9 @@ jobs:
           $conf.version = $ver
           $conf | ConvertTo-Json -Depth 10 | Set-Content emulator/src-tauri/tauri.conf.json
           (Get-Content emulator/src-tauri/src/lib.rs) -replace 'const CURRENT_VERSION: &str = "[^"]*"', "const CURRENT_VERSION: &str = `"$ver`"" | Set-Content emulator/src-tauri/src/lib.rs
+          $html = Get-Content emulator/src/index.html -Raw
+          $html = $html -replace "const CURRENT_VERSION = '[^']*'", "const CURRENT_VERSION = '$ver'"
+          Set-Content emulator/src/index.html $html -NoNewline
           Write-Host "Set emulator version to $ver"
 
       - name: Install and build
