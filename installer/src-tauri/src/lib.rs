@@ -74,7 +74,6 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
                 .args(["-xf", zip.to_str().unwrap(), "-C", qemu_parent.to_str().unwrap()])
                 .creation_flags(0x08000000)
                 .output().ok();
-            fs::remove_file(&zip).ok();
             if !qemu_exe.exists() {
                 push("QEMU extraction failed!", -1); return;
             }
@@ -103,7 +102,6 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
                 if src.exists() { fs::copy(&src, qemu.join(f)).ok(); }
             }
             fs::remove_dir_all(&tmp).ok();
-            fs::remove_file(&zip).ok();
         }
         push("ADB ready ✓", 47);
 
@@ -129,7 +127,6 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
                     .creation_flags(0x08000000)
                     .output().ok();
             }
-            fs::remove_file(&iso).ok();
         }
         push("Android ready ✓", 88);
 
@@ -173,7 +170,6 @@ fn start_install(state: State<Arc<InstallState>>) -> bool {
         if let Err(e) = fs::copy(&exe_tmp, &exe_dest) {
             push(&format!("Copy failed: {}", e), -1); return;
         }
-        fs::remove_file(&exe_tmp).ok();
         push("VoidEmulator installed ✓", 97);
 
         push("Creating shortcuts...", 98);
