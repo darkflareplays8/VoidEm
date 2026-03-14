@@ -1,131 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>VoidEmulator</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=VT323&family=Rajdhani:wght@400;600;700&display=swap');
-  :root {
-    --void: #07030f; --surface: #0d0a1c; --surface2: #11082a;
-    --border: #2a1a4a; --accent: #8b2fc9; --accent2: #c044ff;
-    --glow: #d580ff; --dim: #4a3a6a; --text: #c8b8e8;
-    --green: #50dc78; --red: #ff4444; --yellow: #ffc832; --blue: #44aaff;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:var(--void); color:var(--text); font-family:'Rajdhani',sans-serif; height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+  <meta charset="UTF-8">
+  <title>VoidEmulator</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=VT323&family=Rajdhani:wght@400;600;700&display=swap');
+    :root {
+      --void: #07030f; --surface: #0d0a1c; --surface2: #11082a;
+      --border: #2a1a4a; --accent: #8b2fc9; --accent2: #c044ff;
+      --glow: #d580ff; --dim: #4a3a6a; --text: #c8b8e8;
+      --green: #50dc78; --red: #ff4444; --yellow: #ffc832; --blue: #44aaff;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:var(--void); color:var(--text); font-family:'Rajdhani',sans-serif; height:100vh; overflow:hidden; display:flex; flex-direction:column; }
 
-  /* Header */
-  .header { display:flex; align-items:center; justify-content:space-between; padding:10px 20px; border-bottom:1px solid var(--border); background:var(--surface); flex-shrink:0; }
-  .header-left { display:flex; align-items:baseline; gap:10px; }
-  .logo { font-family:'VT323',monospace; font-size:26px; color:var(--glow); letter-spacing:4px; text-shadow:0 0 15px var(--accent); }
-  .version-badge { font-size:14px; font-family:"VT323",monospace; color:var(--accent2); letter-spacing:2px; background:rgba(139,47,201,0.15); border:1px solid var(--border); padding:2px 10px; border-radius:3px; cursor:default; }
-  .version-badge.update-available { color:var(--yellow); border-color:var(--yellow); cursor:default; }
-  @keyframes pulse-yellow { 0%,100%{box-shadow:0 0 0 0 rgba(255,200,50,0.3)} 50%{box-shadow:0 0 8px 2px rgba(255,200,50,0.2)} }
-  .header-btns { display:flex; gap:8px; }
-  .hbtn { padding:6px 14px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:600; letter-spacing:2px; text-transform:uppercase; cursor:pointer; border-radius:3px; transition:all 0.2s; }
-  .hbtn:hover { border-color:var(--accent); color:var(--glow); }
-  .hbtn.discord { background:#5865F2; border-color:#5865F2; color:white; display:flex; align-items:center; gap:5px; }
-  .hbtn.discord:hover { background:#4752c4; }
-  .hbtn.new-instance { background:linear-gradient(135deg,#3d1270,#6a20b0); border-color:var(--accent2); color:var(--glow); }
-  .hbtn:disabled { opacity:0.4; cursor:not-allowed; }
+    /* Header */
+    .header { display:flex; align-items:center; justify-content:space-between; padding:10px 20px; border-bottom:1px solid var(--border); background:var(--surface); flex-shrink:0; }
+    .header-left { display:flex; align-items:baseline; gap:10px; }
+    .logo { font-family:'VT323',monospace; font-size:26px; color:var(--glow); letter-spacing:4px; text-shadow:0 0 15px var(--accent); }
+    .version-badge { font-size:14px; font-family:"VT323",monospace; color:var(--accent2); letter-spacing:2px; background:rgba(139,47,201,0.15); border:1px solid var(--border); padding:2px 10px; border-radius:3px; cursor:default; }
+    .version-badge.update-available { color:var(--yellow); border-color:var(--yellow); cursor:default; }
+    @keyframes pulse-yellow { 0%,100%{box-shadow:0 0 0 0 rgba(255,200,50,0.3)} 50%{box-shadow:0 0 8px 2px rgba(255,200,50,0.2)} }
+    .header-btns { display:flex; gap:8px; }
+    .hbtn { padding:6px 14px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:600; letter-spacing:2px; text-transform:uppercase; cursor:pointer; border-radius:3px; transition:all 0.2s; }
+    .hbtn:hover { border-color:var(--accent); color:var(--glow); }
+    .hbtn.discord { background:#5865F2; border-color:#5865F2; color:white; display:flex; align-items:center; gap:5px; }
+    .hbtn.discord:hover { background:#4752c4; }
+    .hbtn.new-instance { background:linear-gradient(135deg,#3d1270,#6a20b0); border-color:var(--accent2); color:var(--glow); }
+    .hbtn:disabled { opacity:0.4; cursor:not-allowed; }
 
-  /* Tabs */
-  .tabs { display:flex; border-bottom:1px solid var(--border); background:var(--surface); flex-shrink:0; }
-  .tab { padding:8px 20px; font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; cursor:pointer; color:var(--dim); border-bottom:2px solid transparent; transition:all 0.2s; }
-  .tab:hover { color:var(--text); }
-  .tab.active { color:var(--glow); border-bottom-color:var(--accent); }
+    /* Tabs */
+    .tabs { display:flex; border-bottom:1px solid var(--border); background:var(--surface); flex-shrink:0; }
+    .tab { padding:8px 20px; font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; cursor:pointer; color:var(--dim); border-bottom:2px solid transparent; transition:all 0.2s; }
+    .tab:hover { color:var(--text); }
+    .tab.active { color:var(--glow); border-bottom-color:var(--accent); }
 
-  /* Not ready */
-  #not-ready { display:none; flex:1; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
-  #not-ready .title { font-family:'VT323',monospace; font-size:42px; color:var(--red); letter-spacing:4px; }
-  #not-ready p { color:var(--dim); font-size:14px; letter-spacing:2px; }
+    /* Not ready */
+    #not-ready { display:none; flex:1; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
+    #not-ready .title { font-family:'VT323',monospace; font-size:42px; color:var(--red); letter-spacing:4px; }
+    #not-ready p { color:var(--dim); font-size:14px; letter-spacing:2px; }
 
-  /* Update overlay */
-  #update-overlay { display:none; position:fixed; inset:0; background:rgba(7,3,15,0.95); z-index:999; flex-direction:column; align-items:center; justify-content:center; gap:24px; }
-  #update-overlay.show { display:flex; }
-  .update-title { font-family:'VT323',monospace; font-size:48px; color:var(--glow); letter-spacing:6px; text-shadow:0 0 20px var(--accent); }
-  .update-subtitle { font-size:13px; color:var(--dim); letter-spacing:3px; }
-  .update-bar-wrap { width:320px; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
-  .update-bar { height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--glow)); border-radius:2px; transition:width 0.1s linear; }
+    /* Update overlay */
+    #update-overlay { display:none; position:fixed; inset:0; background:rgba(7,3,15,0.95); z-index:999; flex-direction:column; align-items:center; justify-content:center; gap:24px; }
+    #update-overlay.show { display:flex; }
+    .update-title { font-family:'VT323',monospace; font-size:48px; color:var(--glow); letter-spacing:6px; text-shadow:0 0 20px var(--accent); }
+    .update-subtitle { font-size:13px; color:var(--dim); letter-spacing:3px; }
+    .update-bar-wrap { width:320px; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+    .update-bar { height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--glow)); border-radius:2px; transition:width 0.1s linear; }
 
-  /* Main emulator tab */
-  #tab-emulator { display:flex; flex:1; overflow:hidden; }
-  .sidebar { width:220px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:12px; gap:6px; overflow-y:auto; flex-shrink:0; }
-  .sidebar-title { font-size:10px; color:var(--dim); letter-spacing:3px; text-transform:uppercase; padding:4px 0; }
-  .instance-card { padding:10px 12px; border:1px solid var(--border); border-radius:4px; cursor:pointer; transition:all 0.2s; }
-  .instance-card:hover, .instance-card.active { border-color:var(--accent); background:rgba(139,47,201,0.1); }
-  .instance-name { font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .instance-status { font-size:10px; color:var(--dim); letter-spacing:1px; margin-top:2px; }
-  .instance-status.running { color:var(--green); }
-  .viewer { flex:1; display:flex; align-items:center; justify-content:center; background:#020109; position:relative; overflow:hidden; }
-  .viewer-placeholder { text-align:center; color:var(--dim); }
-  .viewer-placeholder .big { font-family:'VT323',monospace; font-size:48px; color:var(--border); letter-spacing:4px; }
-  #screen { max-width:100%; max-height:100%; object-fit:contain; display:none; }
-  .controls { width:175px; background:var(--surface); border-left:1px solid var(--border); padding:12px; display:flex; flex-direction:column; gap:6px; overflow-y:auto; flex-shrink:0; }
-  .ctrl-title { font-size:10px; color:var(--dim); letter-spacing:3px; text-transform:uppercase; margin-top:4px; }
-  .ctrl-btn { padding:7px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; cursor:pointer; border-radius:3px; transition:all 0.2s; width:100%; }
-  .ctrl-btn:hover:not(:disabled) { border-color:var(--accent); color:var(--glow); }
-  .ctrl-btn:disabled { opacity:0.35; cursor:not-allowed; }
-  .ctrl-btn.start { border-color:var(--green); color:var(--green); }
-  .ctrl-btn.stop { border-color:var(--red); color:var(--red); }
-  .ctrl-btn.danger { border-color:var(--red); color:var(--red); }
-  .status-bar { font-size:10px; color:var(--dim); letter-spacing:1px; padding:2px 0; min-height:16px; }
+    /* Main emulator tab */
+    #tab-emulator { display:flex; flex:1; overflow:hidden; }
+    .sidebar { width:220px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:12px; gap:6px; overflow-y:auto; flex-shrink:0; }
+    .sidebar-title { font-size:10px; color:var(--dim); letter-spacing:3px; text-transform:uppercase; padding:4px 0; }
+    .instance-card { padding:10px 12px; border:1px solid var(--border); border-radius:4px; cursor:pointer; transition:all 0.2s; }
+    .instance-card:hover, .instance-card.active { border-color:var(--accent); background:rgba(139,47,201,0.1); }
+    .instance-name { font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .instance-status { font-size:10px; color:var(--dim); letter-spacing:1px; margin-top:2px; }
+    .instance-status.running { color:var(--green); }
+    .viewer { flex:1; display:flex; align-items:center; justify-content:center; background:#020109; position:relative; overflow:hidden; }
+    .viewer-placeholder { text-align:center; color:var(--dim); }
+    .viewer-placeholder .big { font-family:'VT323',monospace; font-size:48px; color:var(--border); letter-spacing:4px; }
+    #screen { max-width:100%; max-height:100%; object-fit:contain; display:none; }
+    .controls { width:175px; background:var(--surface); border-left:1px solid var(--border); padding:12px; display:flex; flex-direction:column; gap:6px; overflow-y:auto; flex-shrink:0; }
+    .ctrl-title { font-size:10px; color:var(--dim); letter-spacing:3px; text-transform:uppercase; margin-top:4px; }
+    .ctrl-btn { padding:7px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; cursor:pointer; border-radius:3px; transition:all 0.2s; width:100%; }
+    .ctrl-btn:hover:not(:disabled) { border-color:var(--accent); color:var(--glow); }
+    .ctrl-btn:disabled { opacity:0.35; cursor:not-allowed; }
+    .ctrl-btn.start { border-color:var(--green); color:var(--green); }
+    .ctrl-btn.stop { border-color:var(--red); color:var(--red); }
+    .ctrl-btn.danger { border-color:var(--red); color:var(--red); }
+    .status-bar { font-size:10px; color:var(--dim); letter-spacing:1px; padding:2px 0; min-height:16px; }
 
-  /* Perf stats */
-  .perf-block { background:var(--void); border:1px solid var(--border); border-radius:4px; padding:8px; display:flex; flex-direction:column; gap:5px; }
-  .perf-row { display:flex; justify-content:space-between; align-items:center; }
-  .perf-label { font-size:9px; color:var(--dim); letter-spacing:2px; text-transform:uppercase; }
-  .perf-val { font-size:11px; font-weight:700; color:var(--text); font-family:'VT323',monospace; letter-spacing:1px; }
-  .perf-val.good { color:var(--green); }
-  .perf-val.warn { color:var(--yellow); }
-  .perf-val.bad { color:var(--red); }
-  .perf-bar-wrap { height:2px; background:var(--border); border-radius:1px; margin-top:1px; }
-  .perf-bar { height:100%; border-radius:1px; transition:width 0.5s ease, background 0.5s ease; }
+    /* Perf stats */
+    .perf-block { background:var(--void); border:1px solid var(--border); border-radius:4px; padding:8px; display:flex; flex-direction:column; gap:5px; }
+    .perf-row { display:flex; justify-content:space-between; align-items:center; }
+    .perf-label { font-size:9px; color:var(--dim); letter-spacing:2px; text-transform:uppercase; }
+    .perf-val { font-size:11px; font-weight:700; color:var(--text); font-family:'VT323',monospace; letter-spacing:1px; }
+    .perf-val.good { color:var(--green); }
+    .perf-val.warn { color:var(--yellow); }
+    .perf-val.bad { color:var(--red); }
+    .perf-bar-wrap { height:2px; background:var(--border); border-radius:1px; margin-top:1px; }
+    .perf-bar { height:100%; border-radius:1px; transition:width 0.5s ease, background 0.5s ease; }
 
-  /* Files tab */
-  #tab-files { display:none; flex:1; overflow:hidden; }
-  .files-layout { display:flex; height:100%; }
-  .files-sidebar { width:200px; background:var(--surface); border-right:1px solid var(--border); padding:12px; display:flex; flex-direction:column; gap:6px; overflow-y:auto; flex-shrink:0; }
-  .files-main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
-  .files-toolbar { padding:10px 16px; border-bottom:1px solid var(--border); background:var(--surface); display:flex; align-items:center; gap:10px; flex-shrink:0; }
-  .files-path { font-size:11px; color:var(--dim); letter-spacing:1px; font-family:'VT323',monospace; flex:1; }
-  .files-action { padding:5px 12px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:600; letter-spacing:1px; cursor:pointer; border-radius:3px; transition:all 0.2s; }
-  .files-action:hover { border-color:var(--accent); color:var(--glow); }
-  .files-action.upload { background:linear-gradient(135deg,#1a0830,#3a1060); border-color:var(--accent); color:var(--glow); }
-  .files-list { flex:1; overflow-y:auto; padding:8px; }
-  .file-row { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:3px; cursor:pointer; transition:background 0.15s; border:1px solid transparent; }
-  .file-row:hover { background:rgba(139,47,201,0.08); border-color:var(--border); }
-  .file-row.selected { background:rgba(139,47,201,0.15); border-color:var(--accent); }
-  .file-icon { font-size:14px; width:18px; text-align:center; flex-shrink:0; }
-  .file-name { flex:1; font-size:12px; color:var(--text); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .file-size { font-size:10px; color:var(--dim); letter-spacing:1px; white-space:nowrap; }
-  .inst-select-card { padding:10px 12px; border:1px solid var(--border); border-radius:4px; cursor:pointer; transition:all 0.2s; }
-  .inst-select-card:hover, .inst-select-card.active { border-color:var(--accent); background:rgba(139,47,201,0.1); }
-  .inst-select-name { font-size:13px; font-weight:600; color:var(--text); }
-  .inst-select-status { font-size:10px; color:var(--dim); margin-top:2px; }
-  .inst-select-status.running { color:var(--green); }
-  .files-empty { flex:1; display:flex; align-items:center; justify-content:center; color:var(--dim); font-size:12px; letter-spacing:2px; flex-direction:column; gap:8px; }
-  .files-empty .big { font-family:'VT323',monospace; font-size:32px; color:var(--border); }
-  .files-loading { padding:20px; text-align:center; color:var(--dim); font-size:11px; letter-spacing:2px; }
+    /* Files tab */
+    #tab-files { display:none; flex:1; overflow:hidden; }
+    .files-layout { display:flex; height:100%; }
+    .files-sidebar { width:200px; background:var(--surface); border-right:1px solid var(--border); padding:12px; display:flex; flex-direction:column; gap:6px; overflow-y:auto; flex-shrink:0; }
+    .files-main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+    .files-toolbar { padding:10px 16px; border-bottom:1px solid var(--border); background:var(--surface); display:flex; align-items:center; gap:10px; flex-shrink:0; }
+    .files-path { font-size:11px; color:var(--dim); letter-spacing:1px; font-family:'VT323',monospace; flex:1; }
+    .files-action { padding:5px 12px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:600; letter-spacing:1px; cursor:pointer; border-radius:3px; transition:all 0.2s; }
+    .files-action:hover { border-color:var(--accent); color:var(--glow); }
+    .files-action.upload { background:linear-gradient(135deg,#1a0830,#3a1060); border-color:var(--accent); color:var(--glow); }
+    .files-list { flex:1; overflow-y:auto; padding:8px; }
+    .file-row { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:3px; cursor:pointer; transition:background 0.15s; border:1px solid transparent; }
+    .file-row:hover { background:rgba(139,47,201,0.08); border-color:var(--border); }
+    .file-row.selected { background:rgba(139,47,201,0.15); border-color:var(--accent); }
+    .file-icon { font-size:14px; width:18px; text-align:center; flex-shrink:0; }
+    .file-name { flex:1; font-size:12px; color:var(--text); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .file-size { font-size:10px; color:var(--dim); letter-spacing:1px; white-space:nowrap; }
+    .inst-select-card { padding:10px 12px; border:1px solid var(--border); border-radius:4px; cursor:pointer; transition:all 0.2s; }
+    .inst-select-card:hover, .inst-select-card.active { border-color:var(--accent); background:rgba(139,47,201,0.1); }
+    .inst-select-name { font-size:13px; font-weight:600; color:var(--text); }
+    .inst-select-status { font-size:10px; color:var(--dim); margin-top:2px; }
+    .inst-select-status.running { color:var(--green); }
+    .files-empty { flex:1; display:flex; align-items:center; justify-content:center; color:var(--dim); font-size:12px; letter-spacing:2px; flex-direction:column; gap:8px; }
+    .files-empty .big { font-family:'VT323',monospace; font-size:32px; color:var(--border); }
+    .files-loading { padding:20px; text-align:center; color:var(--dim); font-size:11px; letter-spacing:2px; }
 
-  /* Modal */
-  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:center; justify-content:center; }
-  .modal-overlay.show { display:flex; }
-  .modal { background:var(--surface); border:1px solid var(--border); padding:24px; border-radius:6px; min-width:300px; max-width:420px; }
-  .modal h3 { font-family:'VT323',monospace; font-size:24px; color:var(--glow); letter-spacing:3px; margin-bottom:12px; }
-  .modal p { font-size:13px; color:var(--text); margin-bottom:16px; line-height:1.5; }
-  .modal p span { color:var(--red); font-weight:700; }
-  .modal input { width:100%; padding:8px 12px; background:var(--void); border:1px solid var(--border); color:var(--text); font-family:'Rajdhani',sans-serif; font-size:14px; border-radius:3px; margin-bottom:12px; outline:none; }
-  .modal input:focus { border-color:var(--accent); }
-  .modal-btns { display:flex; gap:8px; justify-content:flex-end; }
-  .mbtn { padding:8px 20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:600; letter-spacing:2px; cursor:pointer; border-radius:3px; transition:all 0.2s; }
-  .mbtn:hover { border-color:var(--accent); }
-  .mbtn.confirm { background:linear-gradient(135deg,#3d1270,#6a20b0); border-color:var(--accent2); color:var(--glow); }
-  .mbtn.danger { background:rgba(255,68,68,0.1); border-color:var(--red); color:var(--red); }
-  .mbtn:disabled { opacity:0.5; cursor:not-allowed; }
+    /* Modal */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:center; justify-content:center; }
+    .modal-overlay.show { display:flex; }
+    .modal { background:var(--surface); border:1px solid var(--border); padding:24px; border-radius:6px; min-width:300px; max-width:420px; }
+    .modal h3 { font-family:'VT323',monospace; font-size:24px; color:var(--glow); letter-spacing:3px; margin-bottom:12px; }
+    .modal p { font-size:13px; color:var(--text); margin-bottom:16px; line-height:1.5; }
+    .modal p span { color:var(--red); font-weight:700; }
+    .modal input { width:100%; padding:8px 12px; background:var(--void); border:1px solid var(--border); color:var(--text); font-family:'Rajdhani',sans-serif; font-size:14px; border-radius:3px; margin-bottom:12px; outline:none; }
+    .modal input:focus { border-color:var(--accent); }
+    .modal-btns { display:flex; gap:8px; justify-content:flex-end; }
+    .mbtn { padding:8px 20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:600; letter-spacing:2px; cursor:pointer; border-radius:3px; transition:all 0.2s; }
+    .mbtn:hover { border-color:var(--accent); }
+    .mbtn.confirm { background:linear-gradient(135deg,#3d1270,#6a20b0); border-color:var(--accent2); color:var(--glow); }
+    .mbtn.danger { background:rgba(255,68,68,0.1); border-color:var(--red); color:var(--red); }
+    .mbtn:disabled { opacity:0.5; cursor:not-allowed; }
 
-  ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
-</style>
+    ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+  </style>
 </head>
 <body>
 
@@ -171,8 +171,7 @@
       <div class="big">VOID</div>
       <div style="font-size:12px;letter-spacing:3px;margin-top:8px;">Select an instance to start</div>
     </div>
-    <canvas id="screen" style="display:none;max-width:100%;max-height:100%;"></canvas>
-    <div id="vnc-status" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--dim);font-size:11px;letter-spacing:2px;text-align:center;"></div>
+    <div id="running-msg" style="display:none;text-align:center;color:var(--dim);"><div style="font-family:'VT323',monospace;font-size:32px;color:var(--border);letter-spacing:4px;">RUNNING</div><div style="font-size:11px;letter-spacing:2px;margin-top:8px;">Android is open in its own window</div></div>
   </div>
   <div class="controls">
     <div class="ctrl-title">Controls</div>
@@ -246,501 +245,426 @@
 </div>
 
 <script>
-const invoke = (...args) => window.__TAURI__.core.invoke(...args);
-const CURRENT_VERSION = '2.0.2'; // CI replaces this with actual version
+  const invoke = (...args) => window.__TAURI__.core.invoke(...args);
+  const CURRENT_VERSION = '2.0.2'; // CI replaces this with actual version
 
-let instances = [];
-let selectedName = null;
-let screenInterval = null;
-let busy = false;
+  let instances = [];
+  let selectedName = null;
+  let screenInterval = null;
+  let busy = false;
 
-// Perf tracking
-let frameCount = 0;
-let lastFrameTime = 0;
-let totalFrames = 0;
-let rfb = null; // noVNC RFB connection
-let fpsInterval = null;
+  // Perf tracking
+  let frameCount = 0;
+  let lastFrameTime = 0;
+  let totalFrames = 0;
 
-// Files state
-let filesInstance = null;
-let filesPath = '/sdcard';
-let filesStack = [];
-let selectedFile = null;
 
-// ─── Version check ───────────────────────────────────
-async function checkVersion() {
-  try {
-    const badge = document.getElementById('version-badge');
-    badge.textContent = 'v' + CURRENT_VERSION;
-    const resp = await fetch('https://raw.githubusercontent.com/darkflareplays8/VoidEm/main/release.json');
-    const data = await resp.json();
-    const latest = data.version;
-    if (latest && latest !== CURRENT_VERSION) {
-      // Auto-update immediately on launch
-      fakeUpdate(latest);
+  // Files state
+  let filesInstance = null;
+  let filesPath = '/sdcard';
+  let filesStack = [];
+  let selectedFile = null;
+
+  // ─── Version check ───────────────────────────────────
+  async function checkVersion() {
+    try {
+      const badge = document.getElementById('version-badge');
+      badge.textContent = 'v' + CURRENT_VERSION;
+      const resp = await fetch('https://raw.githubusercontent.com/darkflareplays8/VoidEm/main/release.json');
+      const data = await resp.json();
+      const latest = data.version;
+      if (latest && latest !== CURRENT_VERSION) {
+        // Auto-update immediately on launch
+        fakeUpdate(latest);
+      }
+    } catch(e) {}
+  }
+
+  function fakeUpdate(newVer) {
+    const overlay = document.getElementById('update-overlay');
+    const bar = document.getElementById('update-bar');
+    const sub = document.getElementById('update-subtitle');
+    overlay.classList.add('show');
+    const steps = [
+      [0, 'Fetching latest version...'],
+      [15, 'Downloading VoidEmulator v' + newVer + '...'],
+      [55, 'Installing update...'],
+      [85, 'Finalizing...'],
+      [100, 'Update complete!'],
+    ];
+    let i = 0;
+    function next() {
+      if (i >= steps.length) {
+        setTimeout(() => {
+          overlay.classList.remove('show');
+          // Update badge to show new version
+          document.getElementById('version-badge').textContent = 'v' + newVer;
+        }, 1000);
+        return;
+      }
+      const [pct, msg] = steps[i++];
+      bar.style.width = pct + '%';
+      sub.textContent = msg;
+      setTimeout(next, i === steps.length ? 800 : 500 + Math.random() * 400);
     }
-  } catch(e) {}
-}
+    next();
+  }
 
-function fakeUpdate(newVer) {
-  const overlay = document.getElementById('update-overlay');
-  const bar = document.getElementById('update-bar');
-  const sub = document.getElementById('update-subtitle');
-  overlay.classList.add('show');
-  const steps = [
-    [0, 'Fetching latest version...'],
-    [15, 'Downloading VoidEmulator v' + newVer + '...'],
-    [55, 'Installing update...'],
-    [85, 'Finalizing...'],
-    [100, 'Update complete!'],
-  ];
-  let i = 0;
-  function next() {
-    if (i >= steps.length) {
-      setTimeout(() => {
-        overlay.classList.remove('show');
-        // Update badge to show new version
-        document.getElementById('version-badge').textContent = 'v' + newVer;
-      }, 1000);
+  // ─── Tab switching ────────────────────────────────────
+  function switchTab(tab) {
+    document.getElementById('tab-emulator').style.display = tab === 'emulator' ? 'flex' : 'none';
+    document.getElementById('tab-files').style.display = tab === 'files' ? 'flex' : 'none';
+    document.getElementById('tab-btn-emulator').classList.toggle('active', tab === 'emulator');
+    document.getElementById('tab-btn-files').classList.toggle('active', tab === 'files');
+    if (tab === 'files') renderFilesInstanceList();
+  }
+
+  // ─── Utils ────────────────────────────────────────────
+  function setStatus(msg) { document.getElementById('status').textContent = msg; }
+
+  function setBusy(val, msg = '') {
+    busy = val;
+    ['btn-start','btn-stop','btn-capture','btn-delete','btn-new'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = val;
+    });
+    if (msg) setStatus(msg);
+  }
+
+  async function persistInstances() {
+    await invoke('save_instances', { instances });
+  }
+
+  // ─── Instances ────────────────────────────────────────
+  function renderInstances() {
+    const list = document.getElementById('instance-list');
+    if (instances.length === 0) {
+      list.innerHTML = '<div style="color:var(--dim);font-size:11px;letter-spacing:1px;padding:4px 0;">No instances yet</div>';
       return;
     }
-    const [pct, msg] = steps[i++];
-    bar.style.width = pct + '%';
-    sub.textContent = msg;
-    setTimeout(next, i === steps.length ? 800 : 500 + Math.random() * 400);
-  }
-  next();
-}
-
-// ─── Tab switching ────────────────────────────────────
-function switchTab(tab) {
-  document.getElementById('tab-emulator').style.display = tab === 'emulator' ? 'flex' : 'none';
-  document.getElementById('tab-files').style.display = tab === 'files' ? 'flex' : 'none';
-  document.getElementById('tab-btn-emulator').classList.toggle('active', tab === 'emulator');
-  document.getElementById('tab-btn-files').classList.toggle('active', tab === 'files');
-  if (tab === 'files') renderFilesInstanceList();
-}
-
-// ─── Utils ────────────────────────────────────────────
-function setStatus(msg) { document.getElementById('status').textContent = msg; }
-
-function setBusy(val, msg = '') {
-  busy = val;
-  ['btn-start','btn-stop','btn-capture','btn-delete','btn-new'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = val;
-  });
-  if (msg) setStatus(msg);
-}
-
-async function persistInstances() {
-  await invoke('save_instances', { instances });
-}
-
-// ─── Instances ────────────────────────────────────────
-function renderInstances() {
-  const list = document.getElementById('instance-list');
-  if (instances.length === 0) {
-    list.innerHTML = '<div style="color:var(--dim);font-size:11px;letter-spacing:1px;padding:4px 0;">No instances yet</div>';
-    return;
-  }
-  list.innerHTML = instances.map(inst => `
+    list.innerHTML = instances.map(inst => `
     <div class="instance-card ${inst.name === selectedName ? 'active' : ''}" onclick="selectInstance('${inst.name}')">
       <div class="instance-name">${inst.name}</div>
       <div class="instance-status ${inst.running ? 'running' : ''}">${inst.running ? '● RUNNING' : '○ STOPPED'}</div>
     </div>
   `).join('');
-}
+  }
 
-function selectInstance(name) {
-  if (busy) return;
-  selectedName = name;
-  renderInstances();
-  const inst = instances.find(i => i.name === name);
-  const hasScreen = inst && inst.running;
-  document.getElementById('placeholder').style.display = hasScreen ? 'none' : 'flex';
-  if (hasScreen) {
-    document.getElementById('vnc-status').style.display = 'block';
-    document.getElementById('vnc-status').textContent = 'Reconnecting...';
-    setTimeout(() => connectVNC(inst.index), 500);
-  } else {
-    document.getElementById('screen').style.display = 'none';
-    document.getElementById('vnc-status').style.display = 'none';
+  function selectInstance(name) {
+    if (busy) return;
+    selectedName = name;
+    renderInstances();
+    const inst = instances.find(i => i.name === name);
+    const isRunning = inst && inst.running;
+    document.getElementById('placeholder').style.display = isRunning ? 'none' : 'flex';
+    document.getElementById('running-msg').style.display = isRunning ? 'block' : 'none';
+    if (!isRunning) resetPerf();
+    setStatus('');
+  }
+
+  // ─── Modal helpers ────────────────────────────────────
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+    if (id === 'modal-new') document.getElementById('instance-name-input').value = '';
+  }
+
+  function showNewInstance() {
+    document.getElementById('modal-new').classList.add('show');
+    setTimeout(() => document.getElementById('instance-name-input').focus(), 50);
+  }
+
+  // ─── Create instance ──────────────────────────────────
+  async function createInstance() {
+    const name = document.getElementById('instance-name-input').value.trim();
+    if (!name) return;
+    // Sanitize: letters, numbers, hyphens, underscores only
+    if (!/^[a-zA-Z0-9_\-]+$/.test(name)) { setStatus('Name: letters/numbers/_ only'); return; }
+    if (instances.find(i => i.name === name)) { setStatus('Name already taken'); return; }
+    document.getElementById('btn-create').disabled = true;
+    document.getElementById('btn-cancel').disabled = true;
+    document.getElementById('btn-create').textContent = 'Creating...';
+    const ok = await invoke('create_overlay', { name });
+    document.getElementById('btn-create').disabled = false;
+    document.getElementById('btn-cancel').disabled = false;
+    document.getElementById('btn-create').textContent = 'Create';
+    if (ok) {
+      instances.push({ name, running: false, index: instances.length });
+      await persistInstances();
+      renderInstances();
+      selectInstance(name);
+    } else { setStatus('Failed to create instance'); }
+    closeModal('modal-new');
+  }
+
+  // ─── Start / Stop ─────────────────────────────────────
+  async function startSelected() {
+    if (!selectedName || busy) return;
+    const inst = instances.find(i => i.name === selectedName);
+    if (!inst || inst.running) return;
+    setBusy(true, 'Starting...');
+    const ok = await invoke('start_qemu', { name: inst.name, index: inst.index });
+    if (ok) {
+      inst.running = true;
+      await persistInstances();
+      renderInstances();
+      document.getElementById('placeholder').style.display = 'none';
+      document.getElementById('running-msg').style.display = 'block';
+      setStatus('Running');
+    } else { setStatus('Failed to start'); }
+    setBusy(false);
+  }
+
+  async function stopSelected() {
+    if (!selectedName || busy) return;
+    const inst = instances.find(i => i.name === selectedName);
+    if (!inst || !inst.running) return;
+    setBusy(true, 'Stopping...');
+    await invoke('stop_instance', { name: inst.name });
+    inst.running = false;
+    await persistInstances();
+    document.getElementById('running-msg').style.display = 'none';
+    document.getElementById('placeholder').style.display = 'flex';
     resetPerf();
+    renderInstances();
+    setStatus('Stopped');
+    setBusy(false);
   }
-  setStatus('');
-}
 
-// ─── Modal helpers ────────────────────────────────────
-function closeModal(id) {
-  document.getElementById(id).classList.remove('show');
-  if (id === 'modal-new') document.getElementById('instance-name-input').value = '';
-}
+  // ─── Delete ───────────────────────────────────────────
+  function confirmDelete() {
+    if (!selectedName) return;
+    document.getElementById('delete-name-label').textContent = '"' + selectedName + '"';
+    document.getElementById('modal-delete').classList.add('show');
+  }
 
-function showNewInstance() {
-  document.getElementById('modal-new').classList.add('show');
-  setTimeout(() => document.getElementById('instance-name-input').focus(), 50);
-}
-
-// ─── Create instance ──────────────────────────────────
-async function createInstance() {
-  const name = document.getElementById('instance-name-input').value.trim();
-  if (!name) return;
-  // Sanitize: letters, numbers, hyphens, underscores only
-  if (!/^[a-zA-Z0-9_\-]+$/.test(name)) { setStatus('Name: letters/numbers/_ only'); return; }
-  if (instances.find(i => i.name === name)) { setStatus('Name already taken'); return; }
-  document.getElementById('btn-create').disabled = true;
-  document.getElementById('btn-cancel').disabled = true;
-  document.getElementById('btn-create').textContent = 'Creating...';
-  const ok = await invoke('create_overlay', { name });
-  document.getElementById('btn-create').disabled = false;
-  document.getElementById('btn-cancel').disabled = false;
-  document.getElementById('btn-create').textContent = 'Create';
-  if (ok) {
-    instances.push({ name, running: false, index: instances.length });
+  async function doDelete() {
+    closeModal('modal-delete');
+    if (!selectedName) return;
+    setBusy(true, 'Deleting...');
+    await invoke('delete_instance', { name: selectedName });
+    instances = instances.filter(i => i.name !== selectedName);
+    instances.forEach((inst, i) => inst.index = i);
+    selectedName = null;
+    document.getElementById('running-msg').style.display = 'none';
+    document.getElementById('placeholder').style.display = 'flex';
+    resetPerf();
     await persistInstances();
     renderInstances();
-    selectInstance(name);
-  } else { setStatus('Failed to create instance'); }
-  closeModal('modal-new');
-}
+    setStatus('');
+    setBusy(false);
+  }
 
-// ─── Start / Stop ─────────────────────────────────────
-async function startSelected() {
-  if (!selectedName || busy) return;
-  const inst = instances.find(i => i.name === selectedName);
-  if (!inst || inst.running) return;
-  setBusy(true, 'Starting...');
-  const ok = await invoke('start_qemu', { name: inst.name, index: inst.index });
-  if (ok) {
-    inst.running = true;
-    await persistInstances();
-    renderInstances();
-    document.getElementById('placeholder').style.display = 'none';
-    document.getElementById('vnc-status').style.display = 'block';
-    document.getElementById('vnc-status').textContent = 'Connecting to display...';
-    // Wait a moment for QEMU to start VNC server, then connect
-    setTimeout(() => connectVNC(inst.index), 3000);
-    setStatus('Running');
-  } else { setStatus('Failed to start'); }
-  setBusy(false);
-}
+  // ─── Screen capture + perf ────────────────────────────
 
-async function stopSelected() {
-  if (!selectedName || busy) return;
-  const inst = instances.find(i => i.name === selectedName);
-  if (!inst || !inst.running) return;
-  setBusy(true, 'Stopping...');
-  await invoke('stop_instance', { name: inst.name });
-  inst.running = false;
-  await persistInstances();
-  if (rfb) { try { rfb.disconnect(); } catch(e) {} rfb = null; }
-  clearInterval(fpsInterval);
-  fpsInterval = null;
-  document.getElementById('screen').style.display = 'none';
-  document.getElementById('vnc-status').style.display = 'none';
-  document.getElementById('placeholder').style.display = 'flex';
-  resetPerf();
-  renderInstances();
-  setStatus('Stopped');
-  setBusy(false);
-}
-
-// ─── Delete ───────────────────────────────────────────
-function confirmDelete() {
-  if (!selectedName) return;
-  document.getElementById('delete-name-label').textContent = '"' + selectedName + '"';
-  document.getElementById('modal-delete').classList.add('show');
-}
-
-async function doDelete() {
-  closeModal('modal-delete');
-  if (!selectedName) return;
-  if (rfb) { try { rfb.disconnect(); } catch(e) {} rfb = null; }
-  clearInterval(fpsInterval);
-  setBusy(true, 'Deleting...');
-  await invoke('delete_instance', { name: selectedName });
-  instances = instances.filter(i => i.name !== selectedName);
-  instances.forEach((inst, i) => inst.index = i);
-  selectedName = null;
-  if (rfb) { try { rfb.disconnect(); } catch(e) {} rfb = null; }
-  clearInterval(fpsInterval);
-  fpsInterval = null;
-  document.getElementById('screen').style.display = 'none';
-  document.getElementById('vnc-status').style.display = 'none';
-  document.getElementById('placeholder').style.display = 'flex';
-  resetPerf();
-  await persistInstances();
-  renderInstances();
-  setStatus('');
-  setBusy(false);
-}
-
-// ─── Screen capture + perf ────────────────────────────
-function connectVNC(index) {
-  const wsPort = 6900 + index;
-  const canvas = document.getElementById('screen');
-  const statusEl = document.getElementById('vnc-status');
-
-  // Dynamically import noVNC RFB
-  import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.4.0/core/rfb.js').then(({ default: RFB }) => {
-    try {
-      if (rfb) { try { rfb.disconnect(); } catch(e) {} }
-      rfb = new RFB(canvas.parentElement, `ws://127.0.0.1:${wsPort}`, {
-        credentials: { password: '' }
-      });
-      rfb.scaleViewport = true;
-      rfb.resizeSession = false;
-
-      rfb.addEventListener('connect', () => {
-        canvas.style.display = 'block';
-        statusEl.style.display = 'none';
-        setStatus('Connected');
-        // Start FPS counter from VNC frame updates
-        let lastCount = 0;
-        fpsInterval = setInterval(() => {
-          const fps = frameCount - lastCount;
-          lastCount = frameCount;
-          totalFrames += fps;
-          updatePerf(fps, 0);
-          document.getElementById('perf-frames').textContent = totalFrames;
-        }, 1000);
-      });
-
-      rfb.addEventListener('disconnect', (e) => {
-        canvas.style.display = 'none';
-        statusEl.style.display = 'block';
-        statusEl.textContent = e.detail.clean ? 'Disconnected' : 'Connection lost';
-        clearInterval(fpsInterval);
-      });
-
-      rfb.addEventListener('credentialsrequired', () => rfb.sendCredentials({ password: '' }));
-
-      // Track frames for FPS
-      rfb.addEventListener('desktopsize', () => { frameCount++; });
-
-    } catch(e) {
-      statusEl.textContent = 'VNC error: ' + e.message;
-      console.error('VNC error:', e);
+  function updatePerf(fps, latencyMs) {
+    const fpsEl = document.getElementById('perf-fps');
+    const latEl = document.getElementById('perf-lat');
+    const barFps = document.getElementById('bar-fps');
+    const barLat = document.getElementById('bar-lat');
+    if (fps > 0) {
+      fpsEl.textContent = fps + ' fps';
+      fpsEl.className = 'perf-val ' + (fps >= 20 ? 'good' : fps >= 10 ? 'warn' : 'bad');
+      barFps.style.width = Math.min(fps / 30 * 100, 100) + '%';
+      barFps.style.background = fps >= 20 ? 'var(--green)' : fps >= 10 ? 'var(--yellow)' : 'var(--red)';
     }
-  }).catch(err => {
-    statusEl.textContent = 'Failed to load VNC client';
-    console.error(err);
-  });
-}
-
-function updatePerf(fps, latencyMs) {
-  const fpsEl = document.getElementById('perf-fps');
-  const latEl = document.getElementById('perf-lat');
-  const barFps = document.getElementById('bar-fps');
-  const barLat = document.getElementById('bar-lat');
-  if (fps > 0) {
-    fpsEl.textContent = fps + ' fps';
-    fpsEl.className = 'perf-val ' + (fps >= 20 ? 'good' : fps >= 10 ? 'warn' : 'bad');
-    barFps.style.width = Math.min(fps / 30 * 100, 100) + '%';
-    barFps.style.background = fps >= 20 ? 'var(--green)' : fps >= 10 ? 'var(--yellow)' : 'var(--red)';
+    const lat = document.getElementById('perf-lat');
+    lat.textContent = latencyMs > 0 ? latencyMs + ' ms' : '—';
   }
-  const lat = document.getElementById('perf-lat');
-  lat.textContent = latencyMs > 0 ? latencyMs + ' ms' : '—';
-}
 
-function resetPerf() {
-  ['perf-fps','perf-lat'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.textContent = '—'; el.className = 'perf-val'; }
-  });
-  ['bar-fps','bar-lat'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.style.width = '0%'; el.style.background = 'var(--green)'; }
-  });
-  document.getElementById('perf-frames').textContent = '0';
-  totalFrames = 0; frameCount = 0; lastFrameTime = 0;
-}
-
-async function captureScreen() {
-  // With VNC, capture is handled by right-clicking the canvas - just focus it
-  if (rfb) rfb.focus();
-}
-
-// ─── File Manager ─────────────────────────────────────
-function renderFilesInstanceList() {
-  const list = document.getElementById('files-instance-list');
-  if (instances.length === 0) {
-    list.innerHTML = '<div style="color:var(--dim);font-size:11px;letter-spacing:1px;">No instances</div>';
-    return;
+  function resetPerf() {
+    ['perf-fps','perf-lat'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = '—'; el.className = 'perf-val'; }
+    });
+    ['bar-fps','bar-lat'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.style.width = '0%'; el.style.background = 'var(--green)'; }
+    });
+    document.getElementById('perf-frames').textContent = '0';
+    totalFrames = 0; frameCount = 0; lastFrameTime = 0;
   }
-  list.innerHTML = instances.map(inst => `
+
+  async function captureScreen() { }
+
+  // ─── File Manager ─────────────────────────────────────
+  function renderFilesInstanceList() {
+    const list = document.getElementById('files-instance-list');
+    if (instances.length === 0) {
+      list.innerHTML = '<div style="color:var(--dim);font-size:11px;letter-spacing:1px;">No instances</div>';
+      return;
+    }
+    list.innerHTML = instances.map(inst => `
     <div class="inst-select-card ${inst.name === filesInstance ? 'active' : ''}" onclick="selectFilesInstance('${inst.name}')">
       <div class="inst-select-name">${inst.name}</div>
       <div class="inst-select-status ${inst.running ? 'running' : ''}">${inst.running ? '● Running' : '○ Stopped'}</div>
     </div>
   `).join('');
-}
+  }
 
-async function selectFilesInstance(name) {
-  filesInstance = name;
-  filesPath = '/sdcard';
-  filesStack = [];
-  renderFilesInstanceList();
-  await loadFiles();
-  document.getElementById('btn-files-up').style.display = 'none';
-  document.getElementById('btn-files-refresh').style.display = '';
-  document.getElementById('btn-files-upload').style.display = '';
-}
+  async function selectFilesInstance(name) {
+    filesInstance = name;
+    filesPath = '/sdcard';
+    filesStack = [];
+    renderFilesInstanceList();
+    await loadFiles();
+    document.getElementById('btn-files-up').style.display = 'none';
+    document.getElementById('btn-files-refresh').style.display = '';
+    document.getElementById('btn-files-upload').style.display = '';
+  }
 
-async function loadFiles() {
-  if (!filesInstance) return;
-  const inst = instances.find(i => i.name === filesInstance);
-  if (!inst) return;
-  const adb_port = 5554 + inst.index * 2;
-  const list = document.getElementById('files-list');
-  const pathEl = document.getElementById('files-path');
-  pathEl.textContent = filesInstance + ':' + filesPath;
-  list.innerHTML = '<div class="files-loading">Loading...</div>';
-  // Use ADB ls -la
-  // Connect ADB first
-  await invoke('run_adb', { args: ['connect', '127.0.0.1:' + adb_port] });
-  const output = await invoke('run_adb', { args: ['-s', '127.0.0.1:' + adb_port, 'shell', 'ls', '-la', filesPath] });
-  if (!output || output.startsWith('Error')) {
-    if (!inst.running) {
-      list.innerHTML = '<div class="files-empty"><div class="big">OFFLINE</div><div>Start the instance to browse files</div></div>';
-    } else {
-      list.innerHTML = '<div class="files-empty"><div class="big">NO ACCESS</div><div>ADB not connected yet</div></div>';
+  async function loadFiles() {
+    if (!filesInstance) return;
+    const inst = instances.find(i => i.name === filesInstance);
+    if (!inst) return;
+    const adb_port = 5554 + inst.index * 2;
+    const list = document.getElementById('files-list');
+    const pathEl = document.getElementById('files-path');
+    pathEl.textContent = filesInstance + ':' + filesPath;
+    list.innerHTML = '<div class="files-loading">Loading...</div>';
+    // Use ADB ls -la
+    // Connect ADB first
+    await invoke('run_adb', { args: ['connect', '127.0.0.1:' + adb_port] });
+    const output = await invoke('run_adb', { args: ['-s', '127.0.0.1:' + adb_port, 'shell', 'ls', '-la', filesPath] });
+    if (!output || output.startsWith('Error')) {
+      if (!inst.running) {
+        list.innerHTML = '<div class="files-empty"><div class="big">OFFLINE</div><div>Start the instance to browse files</div></div>';
+      } else {
+        list.innerHTML = '<div class="files-empty"><div class="big">NO ACCESS</div><div>ADB not connected yet</div></div>';
+      }
+      return;
     }
-    return;
-  }
-  const entries = parseAdbLs(output, filesPath);
-  if (entries.length === 0) {
-    list.innerHTML = '<div class="files-empty"><div class="big">EMPTY</div><div>No files here</div></div>';
-    return;
-  }
-  list.innerHTML = entries.map(e => `
+    const entries = parseAdbLs(output, filesPath);
+    if (entries.length === 0) {
+      list.innerHTML = '<div class="files-empty"><div class="big">EMPTY</div><div>No files here</div></div>';
+      return;
+    }
+    list.innerHTML = entries.map(e => `
     <div class="file-row" onclick="fileClick('${e.name.replace(/'/g,"\\'")}', ${e.isDir})">
       <span class="file-icon">${e.isDir ? '📁' : getFileIcon(e.name)}</span>
       <span class="file-name">${e.name}</span>
       <span class="file-size">${e.isDir ? '' : e.size}</span>
     </div>
   `).join('');
-}
+  }
 
-function parseAdbLs(output, currentPath) {
-  const lines = output.split('\n').filter(l => l.trim() && !l.startsWith('total'));
-  return lines.map(line => {
-    const parts = line.trim().split(/\s+/);
-    if (parts.length < 8) return null;
-    const perm = parts[0];
-    const isDir = perm.startsWith('d');
-    const size = isDir ? '' : formatBytes(parseInt(parts[4]) || 0);
-    const name = parts.slice(7).join(' ').split(' -> ')[0];
-    if (!name || name === '.' || name === '..') return null;
-    return { name, isDir, size, perm };
-  }).filter(Boolean);
-}
+  function parseAdbLs(output, currentPath) {
+    const lines = output.split('\n').filter(l => l.trim() && !l.startsWith('total'));
+    return lines.map(line => {
+      const parts = line.trim().split(/\s+/);
+      if (parts.length < 8) return null;
+      const perm = parts[0];
+      const isDir = perm.startsWith('d');
+      const size = isDir ? '' : formatBytes(parseInt(parts[4]) || 0);
+      const name = parts.slice(7).join(' ').split(' -> ')[0];
+      if (!name || name === '.' || name === '..') return null;
+      return { name, isDir, size, perm };
+    }).filter(Boolean);
+  }
 
-function formatBytes(b) {
-  if (b < 1024) return b + ' B';
-  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
-  return (b/1048576).toFixed(1) + ' MB';
-}
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+    return (b/1048576).toFixed(1) + ' MB';
+  }
 
-function getFileIcon(name) {
-  const ext = name.split('.').pop().toLowerCase();
-  const icons = { jpg:'🖼',jpeg:'🖼',png:'🖼',gif:'🖼',mp4:'🎬',mkv:'🎬',avi:'🎬',mp3:'🎵',wav:'🎵',apk:'📦',zip:'🗜',tar:'🗜',txt:'📄',pdf:'📄',json:'📋',xml:'📋' };
-  return icons[ext] || '📄';
-}
+  function getFileIcon(name) {
+    const ext = name.split('.').pop().toLowerCase();
+    const icons = { jpg:'🖼',jpeg:'🖼',png:'🖼',gif:'🖼',mp4:'🎬',mkv:'🎬',avi:'🎬',mp3:'🎵',wav:'🎵',apk:'📦',zip:'🗜',tar:'🗜',txt:'📄',pdf:'📄',json:'📋',xml:'📋' };
+    return icons[ext] || '📄';
+  }
 
-async function fileClick(name, isDir) {
-  if (isDir) {
-    filesStack.push(filesPath);
-    filesPath = filesPath.endsWith('/') ? filesPath + name : filesPath + '/' + name;
-    document.getElementById('btn-files-up').style.display = '';
+  async function fileClick(name, isDir) {
+    if (isDir) {
+      filesStack.push(filesPath);
+      filesPath = filesPath.endsWith('/') ? filesPath + name : filesPath + '/' + name;
+      document.getElementById('btn-files-up').style.display = '';
+      await loadFiles();
+    } else {
+      // Download file
+      await downloadFile(name);
+    }
+  }
+
+  async function filesGoUp() {
+    if (filesStack.length === 0) return;
+    filesPath = filesStack.pop();
+    if (filesStack.length === 0) document.getElementById('btn-files-up').style.display = 'none';
     await loadFiles();
-  } else {
-    // Download file
-    await downloadFile(name);
   }
-}
 
-async function filesGoUp() {
-  if (filesStack.length === 0) return;
-  filesPath = filesStack.pop();
-  if (filesStack.length === 0) document.getElementById('btn-files-up').style.display = 'none';
-  await loadFiles();
-}
+  async function filesRefresh() {
+    await loadFiles();
+  }
 
-async function filesRefresh() {
-  await loadFiles();
-}
+  async function downloadFile(name) {
+    const inst = instances.find(i => i.name === filesInstance);
+    if (!inst) return;
+    const adb_port = 5554 + inst.index * 2;
+    await invoke('run_adb', { args: ['connect', '127.0.0.1:' + adb_port] });
+    const remotePath = filesPath + '/' + name;
+    setStatus('Downloading ' + name + '...');
+    const result = await invoke('adb_pull_to_downloads', {
+      adb_port,
+      remote: remotePath,
+      filename: name
+    });
+    setStatus(result ? 'Saved: ' + name : 'Download failed');
+    setTimeout(() => setStatus(''), 3000);
+  }
 
-async function downloadFile(name) {
-  const inst = instances.find(i => i.name === filesInstance);
-  if (!inst) return;
-  const adb_port = 5554 + inst.index * 2;
-  await invoke('run_adb', { args: ['connect', '127.0.0.1:' + adb_port] });
-  const remotePath = filesPath + '/' + name;
-  setStatus('Downloading ' + name + '...');
-  const result = await invoke('adb_pull_to_downloads', {
-    adb_port,
-    remote: remotePath,
-    filename: name
+  async function filesUpload() {
+    document.getElementById('upload-input').click();
+  }
+
+  async function handleUpload(input) {
+    const files = input.files;
+    if (!files.length) return;
+    const inst = instances.find(i => i.name === filesInstance);
+    if (!inst) return;
+    const adb_port = 5554 + inst.index * 2;
+    for (const file of files) {
+      setStatus('Uploading ' + file.name + '...');
+      const buf = await file.arrayBuffer();
+      const bytes = Array.from(new Uint8Array(buf));
+      const dest = filesPath + '/' + file.name;
+      const ok = await invoke('adb_push_bytes', { adb_port, bytes, dest });
+      setStatus(ok ? 'Uploaded: ' + file.name : 'Upload failed: ' + file.name);
+    }
+    input.value = '';
+    setTimeout(() => { setStatus(''); loadFiles(); }, 1500);
+  }
+
+  // ─── Discord ──────────────────────────────────────────
+  async function openDiscord() { await invoke('open_discord'); }
+
+  // ─── Keyboard shortcuts ───────────────────────────────
+  document.getElementById('instance-name-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') createInstance();
+    if (e.key === 'Escape') closeModal('modal-new');
   });
-  setStatus(result ? 'Saved: ' + name : 'Download failed');
-  setTimeout(() => setStatus(''), 3000);
-}
 
-async function filesUpload() {
-  document.getElementById('upload-input').click();
-}
-
-async function handleUpload(input) {
-  const files = input.files;
-  if (!files.length) return;
-  const inst = instances.find(i => i.name === filesInstance);
-  if (!inst) return;
-  const adb_port = 5554 + inst.index * 2;
-  for (const file of files) {
-    setStatus('Uploading ' + file.name + '...');
-    const buf = await file.arrayBuffer();
-    const bytes = Array.from(new Uint8Array(buf));
-    const dest = filesPath + '/' + file.name;
-    const ok = await invoke('adb_push_bytes', { adb_port, bytes, dest });
-    setStatus(ok ? 'Uploaded: ' + file.name : 'Upload failed: ' + file.name);
+  // ─── Init ─────────────────────────────────────────────
+  async function init() {
+    if (!window.__TAURI__) return;
+    const setup = await invoke('check_setup');
+    if (!setup.qemu || !setup.image) {
+      document.getElementById('tab-emulator').style.display = 'none';
+      document.getElementById('tab-files').style.display = 'none';
+      document.querySelector('.tabs').style.display = 'none';
+      document.querySelector('.header').style.display = 'none';
+      document.getElementById('not-ready').style.display = 'flex';
+      document.getElementById('not-ready').innerHTML += `<p style="font-size:10px;color:var(--red);margin-top:8px;">qemu:${setup.qemu} img:${setup.image}<br>${setup.qemu_path}<br>${setup.image_path}</p>`;
+      return;
+    }
+    const loaded = await invoke('load_instances');
+    if (Array.isArray(loaded)) {
+      instances = loaded.map(i => ({ ...i, running: false }));
+      await persistInstances();
+    }
+    renderInstances();
+    checkVersion();
   }
-  input.value = '';
-  setTimeout(() => { setStatus(''); loadFiles(); }, 1500);
-}
-
-// ─── Discord ──────────────────────────────────────────
-async function openDiscord() { await invoke('open_discord'); }
-
-// ─── Keyboard shortcuts ───────────────────────────────
-document.getElementById('instance-name-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') createInstance();
-  if (e.key === 'Escape') closeModal('modal-new');
-});
-
-// ─── Init ─────────────────────────────────────────────
-async function init() {
-  if (!window.__TAURI__) return;
-  const setup = await invoke('check_setup');
-  if (!setup.qemu || !setup.image) {
-    document.getElementById('tab-emulator').style.display = 'none';
-    document.getElementById('tab-files').style.display = 'none';
-    document.querySelector('.tabs').style.display = 'none';
-    document.querySelector('.header').style.display = 'none';
-    document.getElementById('not-ready').style.display = 'flex';
-    document.getElementById('not-ready').innerHTML += `<p style="font-size:10px;color:var(--red);margin-top:8px;">qemu:${setup.qemu} img:${setup.image}<br>${setup.qemu_path}<br>${setup.image_path}</p>`;
-    return;
-  }
-  const loaded = await invoke('load_instances');
-  if (Array.isArray(loaded)) {
-    instances = loaded.map(i => ({ ...i, running: false }));
-    await persistInstances();
-  }
-  renderInstances();
-  checkVersion();
-}
-init();
+  init();
 </script>
 </body>
 </html>
