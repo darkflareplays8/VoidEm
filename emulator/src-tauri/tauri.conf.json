@@ -19,9 +19,7 @@
     "security": {
       "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:;"
     },
-    "withGlobalTauri": true,
-    "enableGTKAppId": false,
-    "devtools": true
+    "withGlobalTauri": true
   },
   "bundle": {
     "active": true,
